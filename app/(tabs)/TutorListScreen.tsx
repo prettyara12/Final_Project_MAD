@@ -11,7 +11,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { BottomTabBar } from '../components/BottomTabBar';
+import { useTheme } from '../../context/ThemeContext';
+// import { BottomTabBar } from '../components/BottomTabBar';
 
 // Expanded tutor data covering all subjects
 const TUTORS = [
@@ -142,6 +143,7 @@ const TUTORS = [
 
 export default function TutorListScreen() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredTutors = TUTORS.filter(tutor =>
@@ -156,40 +158,41 @@ export default function TutorListScreen() {
 
   const renderTutorCard = ({ item }: { item: typeof TUTORS[0] }) => (
     <TouchableOpacity 
-      style={styles.card} 
+      style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]} 
       onPress={() => handleTutorPress(item.id)}
       activeOpacity={0.8}
     >
       <View style={styles.cardHeader}>
-        <View style={styles.avatarContainer}>
+        <View style={[styles.avatarContainer, { backgroundColor: colors.avatarBg }]}>
           <Ionicons name="person" size={24} color="#FFF" />
           {item.available && <View style={styles.onlineDot} />}
         </View>
         
-        <View style={styles.badgeContainer}>
-          <Ionicons name="sparkles" size={12} color="#7C3AED" />
-          <Text style={styles.badgeText}>AI RECOMMENDED</Text>
+        <View style={[styles.badgeContainer, { backgroundColor: colors.primaryLight }]}>
+          <Ionicons name="sparkles" size={12} color={colors.primary} />
+          <Text style={[styles.badgeText, { color: colors.primary }]}>AI RECOMMENDED</Text>
         </View>
       </View>
       
-      <Text style={styles.name}>{item.name}</Text>
-      <Text style={styles.subject}>{item.subject}</Text>
+      <Text style={[styles.name, { color: colors.text }]}>{item.name}</Text>
+      <Text style={[styles.subject, { color: colors.textSecondary }]}>{item.subject}</Text>
 
       <View style={styles.categoryRow}>
-        <View style={styles.categoryPill}>
-          <Text style={styles.categoryPillText}>{item.category}</Text>
+        <View style={[styles.categoryPill, { backgroundColor: colors.border }]}>
+          <Text style={[styles.categoryPillText, { color: colors.textSecondary }]}>{item.category}</Text>
         </View>
       </View>
       
       <View style={styles.footerRow}>
         <View style={styles.ratingBox}>
-          <Ionicons name="star" size={14} color="#E11D48" />
-          <Text style={styles.ratingText}>{item.rating}</Text>
-          <Text style={styles.reviewText}>({item.reviews})</Text>
+          <Ionicons name="star" size={14} color="#F59E0B" />
+          <Text style={[styles.ratingText, { color: colors.text }]}>{item.rating}</Text>
+          <Text style={[styles.reviewText, { color: colors.textSecondary }]}>({item.reviews})</Text>
         </View>
         <Text style={[
           styles.availabilityText, 
-          !item.available && styles.unavailableText
+          !item.available && styles.unavailableText,
+          { color: item.available ? colors.primary : colors.textSecondary }
         ]}>
           {item.available ? "Tersedia Sekarang" : "Jadwal Penuh"}
         </Text>
@@ -198,36 +201,36 @@ export default function TutorListScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.background }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Tutor Rekomendasi AI</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Tutor Rekomendasi AI</Text>
         <View style={{ width: 24 }} />
       </View>
 
       {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={20} color="#9CA3AF" />
+      <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        <Ionicons name="search" size={20} color={colors.textSecondary} />
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { color: colors.text }]}
           placeholder="Cari nama tutor atau mata kuliah..."
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor={colors.textSecondary}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
         {searchQuery.length > 0 && (
           <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <Ionicons name="close-circle" size={20} color="#9CA3AF" />
+            <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         )}
       </View>
 
       {/* Results Count */}
       <View style={styles.resultsRow}>
-        <Text style={styles.resultsText}>
+        <Text style={[styles.resultsText, { color: colors.textSecondary }]}>
           {filteredTutors.length} tutor ditemukan
         </Text>
       </View>
@@ -241,13 +244,13 @@ export default function TutorListScreen() {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyState}>
-            <Ionicons name="search-outline" size={48} color="#D1D5DB" />
-            <Text style={styles.emptyTitle}>Tidak Ditemukan</Text>
-            <Text style={styles.emptyDesc}>Coba kata kunci lain untuk menemukan tutor.</Text>
+            <Ionicons name="search-outline" size={48} color={colors.border} />
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>Tidak Ditemukan</Text>
+            <Text style={[styles.emptyDesc, { color: colors.textSecondary }]}>Coba kata kunci lain untuk menemukan tutor.</Text>
           </View>
         }
       />
-      <BottomTabBar activeRoute="search" />
+      {/* Manual BottomTabBar removed */}
     </SafeAreaView>
   );
 }

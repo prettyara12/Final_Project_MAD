@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTheme } from '../../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -39,23 +40,24 @@ const CHART_DATA = [
 
 export default function ProgressScreen() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.background }]}>
         <View style={styles.headerLeft}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-             <Ionicons name="arrow-back" size={24} color="#111827" />
+             <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          <View style={styles.avatarMini}>
+          <View style={[styles.avatarMini, { backgroundColor: colors.avatarBg }]}>
             <Ionicons name="person" size={16} color="#FFF" />
           </View>
-          <Text style={styles.headerLogoText}>EduPartner AI</Text>
+          <Text style={[styles.headerLogoText, { color: colors.primary }]}>EduPartner AI</Text>
         </View>
-        <TouchableOpacity style={styles.notificationBtn}>
-          <Ionicons name="notifications" size={20} color="#4B5563" />
+        <TouchableOpacity style={styles.notificationBtn} onPress={() => router.push('/NotificationScreen' as any)}>
+          <Ionicons name="notifications" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
@@ -63,8 +65,8 @@ export default function ProgressScreen() {
         
         {/* Title Intro */}
         <View style={styles.titleSection}>
-          <Text style={styles.mainTitle}>Perjalanan Belajarku</Text>
-          <Text style={styles.mainDesc}>
+          <Text style={[styles.mainTitle, { color: colors.text }]}>Perjalanan Belajarku</Text>
+          <Text style={[styles.mainDesc, { color: colors.textSecondary }]}>
             Kamu berada di 5% pelajar teratas minggu ini. Pertahankan momentumnya!
           </Text>
         </View>
@@ -85,7 +87,7 @@ export default function ProgressScreen() {
         </View>
 
         {/* Main Mastery Card */}
-        <View style={styles.masteryCard}>
+        <View style={[styles.masteryCard, { backgroundColor: colors.primary }]}>
            <Text style={styles.masterySuperTitle}>DENYUT BELAJAR</Text>
            <Text style={styles.masteryTitle}>Penguasaan{'\n'}Keseluruhan</Text>
            
@@ -95,45 +97,44 @@ export default function ProgressScreen() {
            </View>
            
            <View style={styles.progressBarBg}>
-              <View style={[styles.progressBarFill, { width: '84%', backgroundColor: '#4F46E5' }]} />
+              <View style={[styles.progressBarFill, { width: '84%', backgroundColor: '#FFF' }]} />
            </View>
         </View>
 
         {/* Points / Gamification Card */}
-        <View style={styles.pointsCard}>
+        <View style={[styles.pointsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
            <View style={styles.pointsHeaderRow}>
-              <View style={styles.pointsIconBox}>
+              <View style={[styles.pointsIconBox, { backgroundColor: colors.primary }]}>
                  <Ionicons name="ribbon" size={20} color="#FFFFFF" />
               </View>
               <View style={styles.rankBadge}>
                  <Text style={styles.rankBadgeText}>Peringkat #4</Text>
               </View>
            </View>
-           <Text style={styles.pointsValue}>2,450</Text>
-           <Text style={styles.pointsSubText}>Poin Edu Terkumpul</Text>
+           <Text style={[styles.pointsValue, { color: colors.text }]}>2,450</Text>
+           <Text style={[styles.pointsSubText, { color: colors.textSecondary }]}>Poin Edu Terkumpul</Text>
            
-           <TouchableOpacity style={styles.pointsActionBtn}>
+           <TouchableOpacity style={[styles.pointsActionBtn, { backgroundColor: colors.primary }]}>
               <Text style={styles.pointsActionBtnText}>Tukarkan Hadiah</Text>
            </TouchableOpacity>
         </View>
 
         {/* Subject Progress List */}
         <View style={styles.sectionContainer}>
-           <Text style={styles.sectionTitle}>Kemahiran Mata Kuliah</Text>
+           <Text style={[styles.sectionTitle, { color: colors.text }]}>Kemahiran Mata Kuliah</Text>
            
            <View style={styles.subjectListWrapper}>
               {SUBJECT_PROGRESS.map((sub) => (
-                <View key={sub.id} style={styles.subjectRowCard}>
+                <View key={sub.id} style={[styles.subjectRowCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                    <View style={styles.subIconRow}>
-                      <View style={styles.subIconBox}>
+                      <View style={[styles.subIconBox, { backgroundColor: sub.color + '20' }]}>
                          <Ionicons name={sub.icon as any} size={16} color={sub.color} />
                       </View>
-                      <Text style={styles.subTextTitle}>{sub.title}</Text>
+                      <Text style={[styles.subTextTitle, { color: colors.text }]}>{sub.title}</Text>
                    </View>
                    <Text style={[styles.subTextScore, { color: sub.color }]}>{sub.score}%</Text>
 
-                   {/* Absolute Progress line at bottom of interior row inside card visually */}
-                   <View style={styles.subProgressBarBg}>
+                   <View style={[styles.subProgressBarBg, { backgroundColor: colors.border }]}>
                       <View style={[styles.subProgressBarFill, { width: `${sub.score}%`, backgroundColor: sub.color }]} />
                    </View>
                 </View>
@@ -144,18 +145,18 @@ export default function ProgressScreen() {
         {/* Badges Grid */}
         <View style={styles.sectionContainer}>
            <View style={styles.sectionHeaderRow}>
-              <Text style={styles.sectionTitle}>Lencana Terbaru</Text>
-              <TouchableOpacity><Text style={styles.linkText}>Lihat Semua</Text></TouchableOpacity>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Lencana Terbaru</Text>
+              <TouchableOpacity><Text style={[styles.linkText, { color: colors.primary }]}>Lihat Semua</Text></TouchableOpacity>
            </View>
 
            <View style={styles.badgesGrid}>
               {BADGES.map((badge) => (
-                <View key={badge.id} style={styles.badgeCard}>
+                <View key={badge.id} style={[styles.badgeCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                    <View style={[styles.badgeIconCircle, { backgroundColor: badge.bg }]}>
                       <Ionicons name={badge.icon as any} size={24} color={badge.iconColor} />
                    </View>
-                   <Text style={[styles.badgeTitle, !badge.earned && styles.textMuted]}>{badge.title}</Text>
-                   <Text style={styles.badgeDesc} numberOfLines={2}>{badge.desc}</Text>
+                   <Text style={[styles.badgeTitle, { color: colors.text }, !badge.earned && styles.textMuted]}>{badge.title}</Text>
+                   <Text style={[styles.badgeDesc, { color: colors.textSecondary }]} numberOfLines={2}>{badge.desc}</Text>
                 </View>
               ))}
            </View>
@@ -163,18 +164,18 @@ export default function ProgressScreen() {
 
         {/* Activity Chart Section */}
         <View style={[styles.sectionContainer, { marginBottom: 30 }]}>
-           <Text style={styles.sectionTitle}>Aktivitas Belajar</Text>
+           <Text style={[styles.sectionTitle, { color: colors.text }]}>Aktivitas Belajar</Text>
 
-           <View style={styles.chartCard}>
+           <View style={[styles.chartCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={styles.chartHeaderRow}>
                  <View>
-                    <Text style={styles.chartValueStr}>24.5</Text>
-                    <Text style={styles.chartValueLabel}>Jam</Text>
-                    <Text style={styles.chartValueDesc}>Total waktu belajar{'\n'}minggu ini</Text>
+                    <Text style={[styles.chartValueStr, { color: colors.text }]}>24.5</Text>
+                    <Text style={[styles.chartValueLabel, { color: colors.text }]}>Jam</Text>
+                    <Text style={[styles.chartValueDesc, { color: colors.textSecondary }]}>Total waktu belajar{'\n'}minggu ini</Text>
                  </View>
-                 <View style={styles.togglePill}>
-                    <TouchableOpacity style={styles.toggleActive}><Text style={styles.toggleActiveText}>Minggu</Text></TouchableOpacity>
-                    <TouchableOpacity style={styles.toggleInactive}><Text style={styles.toggleInactiveText}>Bulan</Text></TouchableOpacity>
+                 <View style={[styles.togglePill, { backgroundColor: colors.border }]}>
+                    <TouchableOpacity style={[styles.toggleActive, { backgroundColor: colors.primary }]}><Text style={styles.toggleActiveText}>Minggu</Text></TouchableOpacity>
+                    <TouchableOpacity style={styles.toggleInactive}><Text style={[styles.toggleInactiveText, { color: colors.textSecondary }]}>Bulan</Text></TouchableOpacity>
                  </View>
               </View>
 
@@ -183,10 +184,13 @@ export default function ProgressScreen() {
                     <View key={idx} style={styles.chartBarCol}>
                        <View style={[
                           styles.chartBarFill, 
-                          { height: `${item.height}%` },
+                          { 
+                            height: `${item.height}%`, 
+                            backgroundColor: item.active ? colors.primary : colors.border 
+                          },
                           item.active && styles.chartBarFillActive
                        ]} />
-                       <Text style={styles.chartBarLabel}>{item.day}</Text>
+                       <Text style={[styles.chartBarLabel, { color: colors.textSecondary }]}>{item.day}</Text>
                     </View>
                  ))}
               </View>
@@ -195,32 +199,7 @@ export default function ProgressScreen() {
 
       </ScrollView>
 
-      {/* Mock Bottom Tab Bar */}
-      <View style={styles.bottomTabBar}>
-        <TouchableOpacity style={styles.tabItem} onPress={() => router.push('/HomeScreen' as any)}>
-          <Ionicons name="home-outline" size={24} color="#9CA3AF" />
-          <Text style={styles.tabLabel}>Beranda</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem} onPress={() => router.push('/SubjectScreen' as any)}>
-          <Ionicons name="search-outline" size={24} color="#9CA3AF" />
-          <Text style={styles.tabLabel}>Cari</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem} onPress={() => router.push('/BookingScreen' as any)}>
-          <Ionicons name="book-outline" size={24} color="#9CA3AF" />
-          <Text style={styles.tabLabel}>Sesi</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem} onPress={() => router.push('/AIChatScreen' as any)}>
-          <Ionicons name="chatbubbles-outline" size={24} color="#9CA3AF" />
-          <Text style={styles.tabLabel}>Chat AI</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem}>
-          <View style={styles.activeTabIconWrap}>
-             <Ionicons name="person" size={20} color="#4F46E5" />
-          </View>
-          <Text style={[styles.tabLabel, styles.tabLabelActive]}>Profil</Text>
-        </TouchableOpacity>
-      </View>
-
+      {/* Manual BottomTabBar removed */}
     </SafeAreaView>
   );
 }
@@ -670,41 +649,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#9CA3AF',
   },
-  bottomTabBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 80,
-    backgroundColor: '#FFFFFF',
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'flex-start',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-  },
-  tabItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  activeTabIconWrap: {
-    backgroundColor: '#EBE2FF',
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginBottom: 4,
-  },
   tabLabel: {
     fontSize: 10,
     color: '#9CA3AF',
     marginTop: 4,
-  },
-  tabLabelActive: {
-    color: '#4F46E5',
-    fontWeight: '700',
-    marginTop: 0,
   }
 });

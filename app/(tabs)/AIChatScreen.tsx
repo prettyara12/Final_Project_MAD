@@ -13,7 +13,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { BottomTabBar } from '../components/BottomTabBar';
+import { useTheme } from '../../context/ThemeContext';
+// import { BottomTabBar } from '../components/BottomTabBar'; <--- Removed
 
 const { width } = Dimensions.get('window');
 
@@ -41,6 +42,7 @@ const INITIAL_MESSAGES = [
 
 export default function AIChatScreen() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const [messages, setMessages] = useState(INITIAL_MESSAGES);
   const [inputText, setInputText] = useState('');
   const scrollViewRef = useRef<ScrollView>(null);
@@ -75,17 +77,17 @@ export default function AIChatScreen() {
       <View key={msg.id} style={[styles.messageRow, isUser ? styles.messageRowUser : styles.messageRowAI]}>
         
         {!isUser && (
-          <View style={styles.aiAvatar}>
+          <View style={[styles.aiAvatar, { backgroundColor: colors.primary }]}>
             <Ionicons name="hardware-chip" size={16} color="#FFF" />
           </View>
         )}
 
         <View style={isUser ? styles.bubbleUserWrapper : styles.bubbleAIWrapper}>
-          <View style={[styles.bubble, isUser ? styles.bubbleUser : styles.bubbleAI]}>
+          <View style={[styles.bubble, isUser ? [styles.bubbleUser, { backgroundColor: colors.primary }] : [styles.bubbleAI, { backgroundColor: colors.card, borderColor: colors.border }]]}>
             
             {/* Standard Text Message */}
             {msg.text && (
-              <Text style={[styles.messageText, isUser ? styles.messageTextUser : styles.messageTextAI]}>
+              <Text style={[styles.messageText, isUser ? styles.messageTextUser : [styles.messageTextAI, { color: colors.text }]]}>
                 {msg.text}
               </Text>
             )}
@@ -94,8 +96,8 @@ export default function AIChatScreen() {
             {msg.options && (
               <View style={styles.optionsContainer}>
                 {msg.options.map((opt: string, idx: number) => (
-                  <TouchableOpacity key={idx} style={styles.optionChip}>
-                    <Text style={styles.optionChipText}>{opt}</Text>
+                  <TouchableOpacity key={idx} style={[styles.optionChip, { backgroundColor: colors.background, borderColor: colors.border }]}>
+                    <Text style={[styles.optionChipText, { color: colors.primary }]}>{opt}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -104,56 +106,56 @@ export default function AIChatScreen() {
             {/* Custom Rich Content Message (Cell Division Example) */}
             {msg.isRich && (
               <View style={styles.richContent}>
-                 <Text style={styles.richTitle}>Penjelasan{'\n'}Pembelahan Sel</Text>
+                 <Text style={[styles.richTitle, { color: colors.text }]}>Penjelasan{'\n'}Pembelahan Sel</Text>
                  
                  <View style={styles.richList}>
                     <View style={styles.richListItem}>
-                      <View style={styles.richListBorder} />
+                      <View style={[styles.richListBorder, { backgroundColor: colors.primary }]} />
                       <View style={styles.richListContent}>
-                        <Text style={styles.richListTitle}>1. Mitosis: Mesin Fotokopi</Text>
-                        <Text style={styles.richListText}>Anggap ini seperti membuat fotokopi yang tepat. Satu sel membelah sekali untuk membentuk dua sel "anak" yang identik. Ini adalah cara tubuh Anda tumbuh atau menyembuhkan luka.</Text>
+                        <Text style={[styles.richListTitle, { color: colors.text }]}>1. Mitosis: Mesin Fotokopi</Text>
+                        <Text style={[styles.richListText, { color: colors.textSecondary }]}>Anggap ini seperti membuat fotokopi yang tepat. Satu sel membelah sekali untuk membentuk dua sel "anak" yang identik. Ini adalah cara tubuh Anda tumbuh atau menyembuhkan luka.</Text>
                       </View>
                     </View>
                     
                     <View style={styles.richListItem}>
-                      <View style={styles.richListBorder} />
+                      <View style={[styles.richListBorder, { backgroundColor: colors.primary }]} />
                       <View style={styles.richListContent}>
-                        <Text style={styles.richListTitle}>2. Meiosis: Pengocok</Text>
-                        <Text style={styles.richListText}>Ini lebih seperti mengocok setumpuk kartu. Satu sel membelah dua kali untuk membentuk empat sel unik dengan setengah DNA asli. Ini hanya terjadi untuk reproduksi.</Text>
+                        <Text style={[styles.richListTitle, { color: colors.text }]}>2. Meiosis: Pengocok</Text>
+                        <Text style={[styles.richListText, { color: colors.textSecondary }]}>Ini lebih seperti mengocok setumpuk kartu. Satu sel membelah dua kali untuk membentuk empat sel unik dengan setengah DNA asli. Ini hanya terjadi untuk reproduksi.</Text>
                       </View>
                     </View>
                  </View>
 
                  {/* Rich Cards */}
                  <View style={styles.richCardsRow}>
-                    <View style={styles.richCard}>
+                    <View style={[styles.richCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
                        <View style={styles.richCardIconBoxBlue}>
-                          <Ionicons name="copy" size={18} color="#4F46E5" />
+                          <Ionicons name="copy" size={18} color={colors.primary} />
                        </View>
-                       <Text style={styles.richCardSubtitle}>MITOSIS</Text>
-                       <Text style={styles.richCardTitle}>Sel Somatik (Tubuh)</Text>
+                       <Text style={[styles.richCardSubtitle, { color: colors.textSecondary }]}>MITOSIS</Text>
+                       <Text style={[styles.richCardTitle, { color: colors.text }]}>Sel Somatik (Tubuh)</Text>
                     </View>
                  </View>
 
                  <View style={styles.richCardsRow}>
-                    <View style={styles.richCard}>
+                    <View style={[styles.richCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
                        <View style={styles.richCardIconBoxPurple}>
                           <Ionicons name="people" size={18} color="#9333EA" />
                        </View>
-                       <Text style={styles.richCardSubtitle}>MEIOSIS</Text>
-                       <Text style={styles.richCardTitle}>Gamet (Sel Kelamin)</Text>
+                       <Text style={[styles.richCardSubtitle, { color: colors.textSecondary }]}>MEIOSIS</Text>
+                       <Text style={[styles.richCardTitle, { color: colors.text }]}>Gamet (Sel Kelamin)</Text>
                     </View>
                  </View>
 
                  {/* Source Footer */}
-                 <View style={styles.richFooter}>
-                    <Text style={styles.richSourceText}>Sumber:{'\n'}Campbell Biology, Khan Academy</Text>
+                 <View style={[styles.richFooter, { borderTopColor: colors.border }]}>
+                    <Text style={[styles.richSourceText, { color: colors.textSecondary }]}>Sumber:{'\n'}Campbell Biology, Khan Academy</Text>
                     <View style={styles.richFeedback}>
                        <TouchableOpacity style={styles.feedbackBtn}>
-                         <Ionicons name="thumbs-up" size={16} color="#9CA3AF" />
+                         <Ionicons name="thumbs-up" size={16} color={colors.textSecondary} />
                        </TouchableOpacity>
                        <TouchableOpacity style={styles.feedbackBtn}>
-                         <Ionicons name="thumbs-down" size={16} color="#9CA3AF" />
+                         <Ionicons name="thumbs-down" size={16} color={colors.textSecondary} />
                        </TouchableOpacity>
                     </View>
                  </View>
@@ -165,7 +167,7 @@ export default function AIChatScreen() {
         </View>
 
         {isUser && (
-          <View style={styles.userAvatar}>
+          <View style={[styles.userAvatar, { backgroundColor: colors.avatarBg }]}>
             <Ionicons name="person" size={16} color="#FFF" />
           </View>
         )}
@@ -175,25 +177,28 @@ export default function AIChatScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <KeyboardAvoidingView 
         style={styles.container} 
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: colors.background }]}>
           <View style={styles.headerLeft}>
-            <View style={styles.headerIconWrapper}>
+            <View style={[styles.headerIconWrapper, { backgroundColor: colors.primary }]}>
                <Ionicons name="hardware-chip" size={18} color="#FFF" />
             </View>
-            <Text style={styles.headerLogoText}>EduPartner AI</Text>
+            <Text style={[styles.headerLogoText, { color: colors.text }]}>EduPartner AI</Text>
           </View>
 
           <View style={styles.headerRight}>
-            <TouchableOpacity style={styles.notificationBtn}>
-              <Ionicons name="notifications" size={20} color="#4B5563" />
+            <TouchableOpacity 
+              style={styles.notificationBtn}
+              onPress={() => router.push('/NotificationScreen' as any)}
+            >
+              <Ionicons name="notifications" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
-            <View style={styles.avatarMini}>
+            <View style={[styles.avatarMini, { backgroundColor: colors.avatarBg }]}>
               <Ionicons name="person" size={16} color="#FFF" />
             </View>
           </View>
@@ -210,23 +215,23 @@ export default function AIChatScreen() {
         </ScrollView>
 
         {/* Input Field Section */}
-        <View style={styles.inputAreaWrapper}>
-          <View style={styles.inputContainer}>
+        <View style={[styles.inputAreaWrapper, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
+          <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <TouchableOpacity style={styles.attachBtn}>
-              <Ionicons name="attach" size={24} color="#6B7280" />
+              <Ionicons name="attach" size={24} color={colors.textSecondary} />
             </TouchableOpacity>
             
             <TextInput
-              style={styles.textInput}
+              style={[styles.textInput, { color: colors.text }]}
               placeholder="Ajukan pertanyaan..."
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={colors.textSecondary}
               value={inputText}
               onChangeText={setInputText}
               multiline
             />
 
             <TouchableOpacity 
-              style={[styles.sendBtn, inputText.trim().length > 0 && styles.sendBtnActive]} 
+              style={[styles.sendBtn, inputText.trim().length > 0 ? { backgroundColor: colors.primary } : { backgroundColor: colors.border }]} 
               onPress={handleSend}
             >
               <Ionicons name="send" size={16} color="#FFF" />
@@ -235,7 +240,7 @@ export default function AIChatScreen() {
         </View>
 
       </KeyboardAvoidingView>
-      <BottomTabBar activeRoute="chat" />
+      {/* Manual BottomTabBar removed */}
     </SafeAreaView>
   );
 }
@@ -293,7 +298,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingBottom: 100, // space below messages for floating input
+    paddingBottom: 120, // increased for floating input + tab bar
     paddingTop: 10,
   },
   messageRow: {
@@ -487,7 +492,7 @@ const styles = StyleSheet.create({
   // Floating Input Field
   inputAreaWrapper: {
     position: 'absolute',
-    bottom: 96, // Above bottom tab bar
+    bottom: 10, // Adjusted for persistent tab bar (since it's inside the layout now)
     left: 16,
     right: 16,
   },

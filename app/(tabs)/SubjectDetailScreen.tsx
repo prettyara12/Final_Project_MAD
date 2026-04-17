@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { BottomTabBar } from '../components/BottomTabBar';
+import { useTheme } from '../../context/ThemeContext';
+// import { BottomTabBar } from '../../components/BottomTabBar'; <--- Removed
 
 // Full subject data with details
 const SUBJECT_DATA: Record<string, {
@@ -124,114 +125,115 @@ const SUBJECT_TUTORS: Record<string, { id: string; name: string; specialty: stri
 export default function SubjectDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { colors, isDark } = useTheme();
   
   const subject = SUBJECT_DATA[id || '1'];
   const tutors = SUBJECT_TUTORS[id || '1'] || [];
   
   if (!subject) {
     return (
-      <SafeAreaView style={styles.safeArea}>
-        <Text style={{ padding: 40, textAlign: 'center' }}>Mata kuliah tidak ditemukan.</Text>
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
+        <Text style={{ padding: 40, textAlign: 'center', color: colors.text }}>Mata kuliah tidak ditemukan.</Text>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
 
       {/* Header - Fixed outside ScrollView */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.background }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color="#111827" />
+          <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Detail Mata Kuliah</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Detail Mata Kuliah</Text>
         <View style={{ width: 32 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
 
         {/* Hero Card */}
-        <View style={styles.heroCard}>
+        <View style={[styles.heroCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={[styles.heroIconWrap, { backgroundColor: subject.color }]}>
             <Ionicons name={subject.icon as any} size={48} color={subject.iconColor} />
           </View>
-          <Text style={styles.heroTitle}>{subject.name}</Text>
-          <View style={styles.difficultyPill}>
-            <Ionicons name="school-outline" size={12} color="#4F46E5" />
-            <Text style={styles.difficultyText}>{subject.difficulty}</Text>
+          <Text style={[styles.heroTitle, { color: colors.text }]}>{subject.name}</Text>
+          <View style={[styles.difficultyPill, { backgroundColor: colors.primaryLight }]}>
+             <Ionicons name="school-outline" size={12} color={colors.primary} />
+             <Text style={[styles.difficultyText, { color: colors.primary }]}>{subject.difficulty}</Text>
           </View>
-          <Text style={styles.heroDesc}>{subject.description}</Text>
+          <Text style={[styles.heroDesc, { color: colors.textSecondary }]}>{subject.description}</Text>
         </View>
 
         {/* Stats Row */}
         <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <View style={[styles.statIconBox, { backgroundColor: '#EEF2FF' }]}>
-              <Ionicons name="people" size={20} color="#4F46E5" />
+          <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <View style={[styles.statIconBox, { backgroundColor: colors.primary + '20' }]}>
+              <Ionicons name="people" size={20} color={colors.primary} />
             </View>
-            <Text style={styles.statValue}>{subject.tutorCount}</Text>
-            <Text style={styles.statLabel}>Tutor Tersedia</Text>
+            <Text style={[styles.statValue, { color: colors.text }]}>{subject.tutorCount}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Tutor Tersedia</Text>
           </View>
-          <View style={styles.statCard}>
+          <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={[styles.statIconBox, { backgroundColor: '#FEF3C7' }]}>
               <Ionicons name="star" size={20} color="#F59E0B" />
             </View>
-            <Text style={styles.statValue}>{subject.avgRating}</Text>
-            <Text style={styles.statLabel}>Rating Rata-Rata</Text>
+            <Text style={[styles.statValue, { color: colors.text }]}>{subject.avgRating}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Rating Rata-Rata</Text>
           </View>
-          <View style={styles.statCard}>
+          <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={[styles.statIconBox, { backgroundColor: '#F3E8FF' }]}>
               <Ionicons name="book" size={20} color="#9333EA" />
             </View>
-            <Text style={styles.statValue}>{subject.topics.length}</Text>
-            <Text style={styles.statLabel}>Topik</Text>
+            <Text style={[styles.statValue, { color: colors.text }]}>{subject.topics.length}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Topik</Text>
           </View>
         </View>
 
         {/* Topics List */}
-        <View style={styles.sectionBox}>
-          <Text style={styles.sectionTitle}>Topik yang Dipelajari</Text>
+        <View style={[styles.sectionBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Topik yang Dipelajari</Text>
           {subject.topics.map((topic, idx) => (
-            <View key={idx} style={[styles.topicRow, idx === subject.topics.length - 1 && { borderBottomWidth: 0 }]}>
+            <View key={idx} style={[styles.topicRow, { borderBottomColor: colors.border }, idx === subject.topics.length - 1 && { borderBottomWidth: 0 }]}>
               <View style={[styles.topicBullet, { backgroundColor: subject.iconColor }]} />
-              <Text style={styles.topicText}>{topic}</Text>
+              <Text style={[styles.topicText, { color: colors.text }]}>{topic}</Text>
             </View>
           ))}
         </View>
 
         {/* Tutor List */}
-        <View style={styles.sectionBox}>
+        <View style={[styles.sectionBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.tutorSectionHeader}>
-            <Text style={styles.sectionTitle}>Tutor Tersedia</Text>
-            <View style={styles.tutorCountPill}>
-              <Text style={styles.tutorCountText}>{tutors.length} orang</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Tutor Tersedia</Text>
+            <View style={[styles.tutorCountPill, { backgroundColor: colors.primaryLight }]}>
+              <Text style={[styles.tutorCountText, { color: colors.primary }]}>{tutors.length} orang</Text>
             </View>
           </View>
           {tutors.map((tutor, idx) => (
             <TouchableOpacity 
               key={tutor.id} 
-              style={[styles.tutorRow, idx === tutors.length - 1 && { borderBottomWidth: 0 }]}
+              style={[styles.tutorRow, { borderBottomColor: colors.border }, idx === tutors.length - 1 && { borderBottomWidth: 0 }]}
               onPress={() => router.push('/TutorProfileScreen' as any)}
               activeOpacity={0.7}
             >
-              <View style={styles.tutorAvatar}>
+              <View style={[styles.tutorAvatar, { backgroundColor: colors.avatarBg }]}>
                 <Ionicons name="person" size={18} color="#FFF" />
                 {tutor.available && <View style={styles.tutorOnlineDot} />}
               </View>
               <View style={styles.tutorInfo}>
-                <Text style={styles.tutorName}>{tutor.name}</Text>
-                <Text style={styles.tutorSpecialty}>{tutor.specialty}</Text>
+                <Text style={[styles.tutorName, { color: colors.text }]}>{tutor.name}</Text>
+                <Text style={[styles.tutorSpecialty, { color: colors.textSecondary }]}>{tutor.specialty}</Text>
                 <View style={styles.tutorMetaRow}>
                   <Ionicons name="star" size={12} color="#F59E0B" />
-                  <Text style={styles.tutorRating}>{tutor.rating}</Text>
-                  <Text style={styles.tutorReviews}>({tutor.reviews} ulasan)</Text>
+                  <Text style={[styles.tutorRating, { color: colors.text }]}>{tutor.rating}</Text>
+                  <Text style={[styles.tutorReviews, { color: colors.textSecondary }]}>({tutor.reviews} ulasan)</Text>
                 </View>
               </View>
               <View style={styles.tutorStatusCol}>
                 <Text style={[styles.tutorStatus, !tutor.available && styles.tutorStatusBusy]}>
                   {tutor.available ? 'Tersedia' : 'Penuh'}
                 </Text>
-                <Ionicons name="chevron-forward" size={16} color="#D1D5DB" />
+                <Ionicons name="chevron-forward" size={16} color={colors.border} />
               </View>
             </TouchableOpacity>
           ))}
@@ -240,7 +242,7 @@ export default function SubjectDetailScreen() {
         {/* CTA Buttons */}
         <View style={styles.ctaSection}>
           <TouchableOpacity 
-            style={styles.primaryBtn}
+            style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
             onPress={() => router.push('/TutorListScreen' as any)}
           >
             <Ionicons name="search" size={18} color="#FFF" />
@@ -248,17 +250,17 @@ export default function SubjectDetailScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={styles.secondaryBtn}
+            style={[styles.secondaryBtn, { borderColor: colors.primary, backgroundColor: colors.primaryLight }]}
             onPress={() => router.push('/SubjectScreen' as any)}
           >
-            <Ionicons name="book-outline" size={18} color="#4F46E5" />
-            <Text style={styles.secondaryBtnText}>Mulai Belajar Mandiri</Text>
+            <Ionicons name="book-outline" size={18} color={colors.primary} />
+            <Text style={[styles.secondaryBtnText, { color: colors.primary }]}>Mulai Belajar Mandiri</Text>
           </TouchableOpacity>
         </View>
 
       </ScrollView>
 
-      <BottomTabBar activeRoute="home" />
+      {/* Manual BottomTabBar removed */}
     </SafeAreaView>
   );
 }

@@ -4,20 +4,17 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../context/ThemeContext';
 
-interface BottomTabBarProps {
-  activeRoute: 'home' | 'search' | 'session' | 'chat' | 'profile';
-}
+import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 
-export const BottomTabBar: React.FC<BottomTabBarProps> = ({ activeRoute }) => {
-  const router = useRouter();
+export const BottomTabBar: React.FC<BottomTabBarProps> = ({ state, navigation, descriptors }) => {
   const { colors, isDark } = useTheme();
 
-  const TABS = [
-    { id: 'home', label: 'Beranda', iconActive: 'home', iconInactive: 'home-outline', route: '/HomeScreen' },
-    { id: 'search', label: 'Cari', iconActive: 'search', iconInactive: 'search-outline', route: '/TutorListScreen' },
-    { id: 'session', label: 'Sesi', iconActive: 'book', iconInactive: 'book-outline', route: '/SubjectScreen' },
-    { id: 'chat', label: 'Chat AI', iconActive: 'chatbubbles', iconInactive: 'chatbubbles-outline', route: '/AIChatScreen' },
-    { id: 'profile', label: 'Profil', iconActive: 'person', iconInactive: 'person-outline', route: '/ProfileScreen' },
+  const TABS_CONFIG = [
+    { id: 'HomeScreen', label: 'Beranda', iconActive: 'home', iconInactive: 'home-outline' },
+    { id: 'TutorListScreen', label: 'Cari', iconActive: 'search', iconInactive: 'search-outline' },
+    { id: 'SubjectScreen', label: 'Sesi', iconActive: 'book', iconInactive: 'book-outline' },
+    { id: 'AIChatScreen', label: 'Chat AI', iconActive: 'chatbubbles', iconInactive: 'chatbubbles-outline' },
+    { id: 'ProfileScreen', label: 'Profil', iconActive: 'person', iconInactive: 'person-outline' },
   ] as const;
 
   return (
@@ -25,34 +22,66 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({ activeRoute }) => {
       backgroundColor: colors.tabBar, 
       borderTopColor: colors.tabBarBorder 
     }]}>
-      {TABS.map((tab) => {
-        const isActive = activeRoute === tab.id;
+      {state.routes.map((route, index) => {
+        const { options } = descriptors[route.key];
+        const label =
+          options.tabBarLabel !== undefined
+            ? options.tabBarLabel
+            : options.title !== undefined
+            ? options.title
+            : route.name;
+
+        const isFocused = state.index === index;
+
+        const onPress = () => {
+          const event = navigation.emit({
+            type: 'tabPress',
+            target: route.key,
+            canPreventDefault: true,
+          });
+
+          if (!isFocused && !event.defaultPrevented) {
+            navigation.navigate(route.name);
+          }
+        };
+
+        const onLongPress = () => {
+          navigation.emit({
+            type: 'tabLongPress',
+            target: route.key,
+          });
+        };
+
+        // Find match in config for icons
+        const config = TABS_CONFIG.find(c => c.id === route.name);
+        if (!config) return null;
+
         return (
           <TouchableOpacity 
-            key={tab.id}
-            style={styles.tabItem} 
-            onPress={() => {
-              if (!isActive) {
-                router.replace(tab.route as any);
-              }
-            }}
+            key={route.key}
+            accessibilityRole="button"
+            accessibilityState={isFocused ? { selected: true } : {}}
+            accessibilityLabel={options.tabBarAccessibilityLabel}
+            onPress={onPress}
+            onLongPress={onLongPress}
+            style={styles.tabItem}
           >
             <View style={[
               styles.iconContainer, 
-              isActive && [styles.activeTabIconWrap, { backgroundColor: colors.primaryLight }]
+              isFocused ? { backgroundColor: colors.primaryLight } : null
             ]}>
               <Ionicons 
-                name={isActive ? tab.iconActive : tab.iconInactive} 
+                name={isFocused ? config.iconActive : config.iconInactive} 
                 size={22} 
-                color={isActive ? colors.primary : colors.textMuted} 
+                color={isFocused ? colors.primary : colors.textMuted} 
               />
             </View>
             <Text style={[
               styles.tabLabel, 
               { color: colors.textMuted },
-              isActive && { color: colors.primary, fontWeight: '700' }
+              isFocused && { color: colors.primary, fontWeight: '700' }
             ]}>
-              {tab.label}
+              {config.label}
             </Text>
           </TouchableOpacity>
         );

@@ -15,9 +15,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { BottomTabBar } from '../components/BottomTabBar';
-import { useTheme } from '../context/ThemeContext';
-import { useProfile } from '../context/ProfileContext';
+// import { BottomTabBar } from '../components/BottomTabBar';
+import { useTheme } from '../../context/ThemeContext';
+import { useProfile } from '../../context/ProfileContext';
 export default function ProfileScreen() {
   const router = useRouter();
   const { isDark, colors, toggleTheme } = useTheme();
@@ -127,7 +127,7 @@ export default function ProfileScreen() {
   const handleChangePassword = useCallback(() => {
     Alert.alert(
       '🔐 Ubah Kata Sandi',
-      'Link reset kata sandi telah dikirim ke email:\njulian.aris@university.ac.id\n\nSilakan cek inbox atau folder spam.',
+      `Link reset kata sandi telah dikirim ke email:\n${profileData.email}\n\nSilakan cek inbox atau folder spam.`,
       [{ text: 'Mengerti' }]
     );
   }, []);
@@ -659,8 +659,7 @@ export default function ProfileScreen() {
           </View>
         </View>
       </Modal>
-
-      <BottomTabBar activeRoute="profile" />
+      {/* Manual BottomTabBar removed */}
     </SafeAreaView>
   );
 }

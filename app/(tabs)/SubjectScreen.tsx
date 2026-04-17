@@ -13,7 +13,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { BottomTabBar } from '../components/BottomTabBar';
+import { useTheme } from '../../context/ThemeContext';
+// import { BottomTabBar } from '../components/BottomTabBar';
 
 const { width } = Dimensions.get('window');
 
@@ -54,6 +55,7 @@ const RECENT_NOTES = [
 
 export default function SubjectScreen() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const [subjects, setSubjects] = useState(INITIAL_SUBJECTS);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -86,21 +88,24 @@ export default function SubjectScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       
       {/* Top Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.background }]}>
         <View style={styles.headerLeft}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-             <Ionicons name="arrow-back" size={24} color="#111827" />
+             <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          <View style={styles.avatarMini}>
+          <View style={[styles.avatarMini, { backgroundColor: colors.avatarBg }]}>
             <Ionicons name="person" size={16} color="#FFF" />
           </View>
-          <Text style={styles.headerLogoText}>EduPartner AI</Text>
+          <Text style={[styles.headerLogoText, { color: colors.primary }]}>EduPartner AI</Text>
         </View>
-        <TouchableOpacity style={styles.notificationBtn}>
-          <Ionicons name="notifications" size={20} color="#4B5563" />
+        <TouchableOpacity 
+          style={styles.notificationBtn}
+          onPress={() => router.push('/NotificationScreen' as any)}
+        >
+          <Ionicons name="notifications" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
@@ -108,15 +113,15 @@ export default function SubjectScreen() {
         
         {/* Title Section */}
         <View style={styles.titleSection}>
-           <Text style={styles.mainTitle}>Manajemen Mata{'\n'}Kuliah</Text>
-           <Text style={styles.mainDesc}>Atur perjalanan akademikmu dengan wawasan bertenaga AI.</Text>
+           <Text style={[styles.mainTitle, { color: colors.text }]}>Manajemen Mata{'\n'}Kuliah</Text>
+           <Text style={[styles.mainDesc, { color: colors.textSecondary }]}>Atur perjalanan akademikmu dengan wawasan bertenaga AI.</Text>
            
-           <View style={styles.searchContainer}>
-             <Ionicons name="search" size={20} color="#9CA3AF" />
+           <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+             <Ionicons name="search" size={20} color={colors.textSecondary} />
              <TextInput 
-               style={styles.searchInput}
+               style={[styles.searchInput, { color: colors.text }]}
                placeholder="Cari mata kuliah atau materi..."
-               placeholderTextColor="#9CA3AF"
+               placeholderTextColor={colors.textSecondary}
                value={searchQuery}
                onChangeText={setSearchQuery}
              />
@@ -126,33 +131,36 @@ export default function SubjectScreen() {
         {/* Subjects List (Large Cards) */}
         <View style={styles.cardsSection}>
           {subjects.map((sub, idx) => (
-            <View key={sub.id} style={styles.subjectCard}>
+            <View key={sub.id} style={[styles.subjectCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                <View style={styles.subHeaderRow}>
                  <View style={[styles.subIconBox, { backgroundColor: sub.themeColor + '15' }]}>
                     <Ionicons name={sub.icon as any} size={20} color={sub.themeColor} />
                  </View>
-                 <View style={styles.badgeBox}>
-                   <Text style={styles.badgeText}>{sub.badge}</Text>
+                 <View style={[styles.badgeBox, { backgroundColor: colors.primaryLight }]}>
+                   <Text style={[styles.badgeText, { color: colors.primary }]}>{sub.badge}</Text>
                  </View>
                </View>
 
-               <Text style={styles.subTitle}>{sub.title}</Text>
-               <Text style={styles.subDesc}>{sub.desc}</Text>
+               <Text style={[styles.subTitle, { color: colors.text }]}>{sub.title}</Text>
+               <Text style={[styles.subDesc, { color: colors.textSecondary }]}>{sub.desc}</Text>
 
                <View style={styles.progressRow}>
-                 <Text style={styles.progressLabel}>Kemajuan Kursus</Text>
-                 <Text style={styles.progressLabel}>{sub.progress}%</Text>
+                 <Text style={[styles.progressLabel, { color: colors.textSecondary }]}>Kemajuan Kursus</Text>
+                 <Text style={[styles.progressLabel, { color: sub.themeColor }]}>{sub.progress}%</Text>
                </View>
-               <View style={styles.progressBarBg}>
+               <View style={[styles.progressBarBg, { backgroundColor: colors.border }]}>
                  <View style={[styles.progressBarFill, { width: `${sub.progress}%`, backgroundColor: sub.themeColor }]} />
                </View>
 
                <View style={styles.actionsRow}>
-                 <TouchableOpacity style={[styles.mainActionBtn, { backgroundColor: sub.themeColor }]}>
+                 <TouchableOpacity 
+                   style={[styles.mainActionBtn, { backgroundColor: sub.themeColor }]}
+                   onPress={() => router.push('/SubjectDetailScreen' as any)}
+                 >
                    <Text style={styles.mainActionText}>{sub.actionText}</Text>
                  </TouchableOpacity>
-                 <TouchableOpacity style={styles.moreActionBtn}>
-                   <Ionicons name="ellipsis-horizontal" size={20} color="#6B7280" />
+                 <TouchableOpacity style={[styles.moreActionBtn, { borderColor: colors.border }]}>
+                   <Ionicons name="ellipsis-horizontal" size={20} color={colors.textSecondary} />
                  </TouchableOpacity>
                </View>
             </View>
@@ -161,47 +169,47 @@ export default function SubjectScreen() {
 
         {/* Topik Terkategorisasi */}
         <View style={styles.sectionHeader}>
-           <Text style={styles.sectionTitle}>Topik Terkategorisasi</Text>
+           <Text style={[styles.sectionTitle, { color: colors.text }]}>Topik Terkategorisasi</Text>
         </View>
         <View style={styles.categorySection}>
            {CATEGORIES.map(cat => (
-             <View key={cat.id} style={styles.categoryCard}>
+             <View key={cat.id} style={[styles.categoryCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <View style={styles.catHeader}>
-                   <View style={styles.catIconBox}>
-                     <Ionicons name={cat.icon as any} size={16} color="#4F46E5" />
+                   <View style={[styles.catIconBox, { backgroundColor: colors.primaryLight }]}>
+                     <Ionicons name={cat.icon as any} size={16} color={colors.primary} />
                    </View>
-                   <View style={styles.catFileBadge}>
+                   <View style={[styles.catFileBadge, { backgroundColor: colors.avatarBg }]}>
                       <Text style={styles.catFileText}>{cat.files} File</Text>
                    </View>
                 </View>
-                <Text style={styles.catTitle}>{cat.title}</Text>
-                <Text style={styles.catDesc}>{cat.desc}</Text>
+                <Text style={[styles.catTitle, { color: colors.text }]}>{cat.title}</Text>
+                <Text style={[styles.catDesc, { color: colors.textSecondary }]}>{cat.desc}</Text>
              </View>
            ))}
         </View>
 
         {/* Unggah Materi (Upload Block) */}
-        <View style={styles.uploadBlock}>
+        <View style={[styles.uploadBlock, { backgroundColor: colors.primary }]}>
            <Text style={styles.uploadTitle}>Unggah Materi</Text>
            <Text style={styles.uploadDesc}>
               Unggah PDF, catatan kuliah, atau gambar. AI kami akan secara otomatis mengkategorikannya ke dalam topik.
            </Text>
            
-           <TouchableOpacity style={styles.uploadBoxDashed}>
-              <View style={styles.uploadIconCircle}>
-                 <Ionicons name="cloud-upload" size={24} color="#FFF" />
+           <TouchableOpacity style={[styles.uploadBoxDashed, { borderColor: '#FFF' }]}>
+              <View style={[styles.uploadIconCircle, { backgroundColor: colors.primaryLight }]}>
+                 <Ionicons name="cloud-upload" size={24} color={colors.primary} />
               </View>
               <Text style={styles.uploadBoxTitle}>Tarik file ke sini atau klik untuk mencari</Text>
               <Text style={styles.uploadBoxSub}>Dukung PDF, DOCX, PNG (Maks 50MB)</Text>
            </TouchableOpacity>
 
            {/* Upload Progress Mock */}
-           <View style={styles.uploadProgressRow}>
+           <View style={[styles.uploadProgressRow, { backgroundColor: 'rgba(255,255,255,0.1)' }]}>
               <Ionicons name="document-text" size={16} color="#FFF" style={{marginRight: 8}} />
               <View style={{ flex: 1 }}>
                  <Text style={styles.uploadFileName}>Midterm_Review.pdf</Text>
-                 <View style={styles.uploadProbBarLine}>
-                    <View style={styles.uploadProbBarFill} />
+                 <View style={[styles.uploadProbBarLine, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
+                    <View style={[styles.uploadProbBarFill, { backgroundColor: '#FFF' }]} />
                  </View>
               </View>
               <Text style={styles.uploadFilePercent}>86%</Text>
@@ -211,18 +219,18 @@ export default function SubjectScreen() {
         {/* Catatan Terbaru */}
         <View style={styles.lastSection}>
            <View style={styles.sectionHeaderLine}>
-              <Text style={styles.sectionTitle}>Catatan Terbaru</Text>
-              <TouchableOpacity><Text style={styles.linkText}>Lihat Semua</Text></TouchableOpacity>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Catatan Terbaru</Text>
+              <TouchableOpacity><Text style={[styles.linkText, { color: colors.primary }]}>Lihat Semua</Text></TouchableOpacity>
            </View>
 
            {RECENT_NOTES.map(note => (
-             <View key={note.id} style={styles.noteRow}>
-                <View style={styles.noteIconCircle}>
-                   <Ionicons name={note.icon as any} size={16} color="#4F46E5" />
+             <View key={note.id} style={[styles.noteRow, { borderBottomColor: colors.border }]}>
+                <View style={[styles.noteIconCircle, { backgroundColor: colors.primaryLight }]}>
+                   <Ionicons name={note.icon as any} size={16} color={colors.primary} />
                 </View>
                 <View style={styles.noteInfo}>
-                   <Text style={styles.noteTitle}>{note.title}</Text>
-                   <Text style={styles.noteTime}>{note.time}</Text>
+                   <Text style={[styles.noteTitle, { color: colors.text }]}>{note.title}</Text>
+                   <Text style={[styles.noteTime, { color: colors.textSecondary }]}>{note.time}</Text>
                 </View>
              </View>
            ))}
@@ -234,7 +242,7 @@ export default function SubjectScreen() {
          <Ionicons name="add" size={28} color="#FFF" />
       </TouchableOpacity>
 
-      <BottomTabBar activeRoute="session" />
+      {/* Manual BottomTabBar removed */}
     </SafeAreaView>
   );
 }
@@ -278,7 +286,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   scrollContent: {
-    paddingBottom: 100, // accommodate tabs and fab
+    paddingBottom: 160, // accommodate fab and tab bar space
   },
   titleSection: {
     paddingHorizontal: 20,
@@ -589,7 +597,7 @@ const styles = StyleSheet.create({
   },
   fabBtn: {
     position: 'absolute',
-    bottom: 96,
+    bottom: 20, // Adjusted for persistent tab bar (inside layout)
     right: 20,
     width: 56,
     height: 56,

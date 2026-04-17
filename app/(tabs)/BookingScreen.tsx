@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTheme } from '../../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -51,32 +52,33 @@ const TIME_SLOTS = [
 
 export default function BookingScreen() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const [selectedDate, setSelectedDate] = useState('10');
   const [selectedTime, setSelectedTime] = useState('10:30 AM');
 
   // Dummy action for Konfirmasi Pesanan button
   const handleConfirm = () => {
     console.log("Confirming booking for date:", selectedDate, "at time:", selectedTime);
-    // Move to Session Screen
-    router.push('/SessionScreen' as any);
+    // Move to Sesi (SubjectScreen)
+    router.push('/SubjectScreen' as any);
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       
       {/* Top Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.background }]}>
         <View style={styles.headerLeft}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-             <Ionicons name="arrow-back" size={24} color="#111827" />
+             <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          <View style={styles.avatarMini}>
+          <View style={[styles.avatarMini, { backgroundColor: colors.avatarBg }]}>
             <Ionicons name="person" size={16} color="#FFF" />
           </View>
-          <Text style={styles.headerLogoText}>EduPartner AI</Text>
+          <Text style={[styles.headerLogoText, { color: colors.primary }]}>EduPartner AI</Text>
         </View>
         <TouchableOpacity style={styles.notificationBtn}>
-          <Ionicons name="notifications" size={20} color="#4B5563" />
+          <Ionicons name="notifications" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
@@ -84,25 +86,25 @@ export default function BookingScreen() {
         
         {/* Page Title */}
         <View style={styles.titleSection}>
-          <Text style={styles.mainTitle}>
+          <Text style={[styles.mainTitle, { color: colors.text }]}>
             Pesan Sesi{'\n'}
-            <Text style={styles.mainTitleHighlight}>Berikutnya</Text>
+            <Text style={[styles.mainTitleHighlight, { color: colors.primary }]}>Berikutnya</Text>
           </Text>
-          <Text style={styles.mainDesc}>
+          <Text style={[styles.mainDesc, { color: colors.textSecondary }]}>
             Jadwalkan pengalaman belajar yang dipersonalisasi dengan mentor AI atau tutor sebaya kami. Amankan tempat Anda di atrium digital.
           </Text>
         </View>
 
         {/* Calendar Picker */}
-        <View style={styles.calendarCard}>
+        <View style={[styles.calendarCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.calendarHeader}>
             <View>
-              <Text style={styles.calTitle}>Pilih Tanggal</Text>
-              <Text style={styles.calSubtitle}>Oktober 2023</Text>
+              <Text style={[styles.calTitle, { color: colors.text }]}>Pilih Tanggal</Text>
+              <Text style={[styles.calSubtitle, { color: colors.textSecondary }]}>Oktober 2023</Text>
             </View>
             <View style={styles.arrowsRow}>
-              <TouchableOpacity style={styles.arrowBtn}><Ionicons name="chevron-back" size={18} color="#6B7280" /></TouchableOpacity>
-              <TouchableOpacity style={styles.arrowBtn}><Ionicons name="chevron-forward" size={18} color="#111827" /></TouchableOpacity>
+              <TouchableOpacity style={styles.arrowBtn}><Ionicons name="chevron-back" size={18} color={colors.textSecondary} /></TouchableOpacity>
+              <TouchableOpacity style={styles.arrowBtn}><Ionicons name="chevron-forward" size={18} color={colors.text} /></TouchableOpacity>
             </View>
           </View>
           
@@ -120,7 +122,8 @@ export default function BookingScreen() {
                   key={idx}
                   style={[
                     styles.dateBox, 
-                    isActive && styles.dateBoxActive
+                    isActive && styles.dateBoxActive,
+                    { backgroundColor: isActive ? colors.primary : 'transparent' }
                   ]}
                   onPress={() => {
                     if(!item.inactive) setSelectedDate(item.date);
@@ -130,7 +133,8 @@ export default function BookingScreen() {
                   <Text style={[
                       styles.dateNum, 
                       item.inactive && styles.dateNumInactive,
-                      isActive && styles.dateNumActive
+                      isActive && styles.dateNumActive,
+                      { color: isActive ? '#FFF' : (item.inactive ? colors.border : colors.text) }
                   ]}>
                     {item.date}
                   </Text>
@@ -143,8 +147,8 @@ export default function BookingScreen() {
         {/* Available Slots */}
         <View style={styles.slotsSection}>
           <View style={styles.slotsHeader}>
-            <Ionicons name="time" size={20} color="#4F46E5" style={styles.slotsIcon} />
-            <Text style={styles.slotsTitle}>Slot Tersedia</Text>
+            <Ionicons name="time" size={20} color={colors.primary} style={styles.slotsIcon} />
+            <Text style={[styles.slotsTitle, { color: colors.text }]}>Slot Tersedia</Text>
           </View>
           
           <View style={styles.slotsList}>
@@ -156,7 +160,8 @@ export default function BookingScreen() {
                   style={[
                     styles.slotBtn, 
                     isSelected && styles.slotBtnActive,
-                    slot.full && styles.slotBtnFull
+                    slot.full && styles.slotBtnFull,
+                    { backgroundColor: isSelected ? colors.primary : colors.card, borderColor: colors.border }
                   ]}
                   onPress={() => {
                     if(slot.available) setSelectedTime(slot.time);
@@ -166,7 +171,8 @@ export default function BookingScreen() {
                   <Text style={[
                     styles.slotText,
                     isSelected && styles.slotTextActive,
-                    slot.full && styles.slotTextFull
+                    slot.full && styles.slotTextFull,
+                    { color: isSelected ? '#FFF' : (slot.full ? colors.border : colors.text) }
                   ]}>
                     {slot.time}
                   </Text>
@@ -187,7 +193,7 @@ export default function BookingScreen() {
         </View>
 
         {/* Selected Session Confirmation Card */}
-        <View style={styles.confirmationCard}>
+        <View style={[styles.confirmationCard, { backgroundColor: colors.primary }]}>
            <Text style={styles.confSuperTitle}>SESI TERPILIH</Text>
            <Text style={styles.confTitle}>Fisika Quantum & Model AI</Text>
            
@@ -201,93 +207,68 @@ export default function BookingScreen() {
            </View>
 
            <TouchableOpacity style={styles.confButton} onPress={handleConfirm}>
-              <Text style={styles.confButtonText}>Konfirmasi Pesanan</Text>
+              <Text style={[styles.confButtonText, { color: colors.primary }]}>Konfirmasi Pesanan</Text>
            </TouchableOpacity>
         </View>
 
         {/* Recommended Groups */}
         <View style={styles.groupsSection}>
-          <Text style={styles.groupsHeader}>
-            Grup{'\n'}Belajar <Text style={styles.groupsHeaderHighlight}>Direkomendasikan</Text>
+          <Text style={[styles.groupsHeader, { color: colors.text }]}>
+            Grup{'\n'}Belajar <Text style={[styles.groupsHeaderHighlight, { color: colors.primary }]}>Direkomendasikan</Text>
           </Text>
           
           {/* Card 1 */}
-          <View style={styles.groupCard}>
+          <View style={[styles.groupCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.groupCardContent}>
-              <View style={styles.groupAvatar}>
+              <View style={[styles.groupAvatar, { backgroundColor: colors.avatarBg }]}>
                  <Ionicons name="person" size={20} color="#FFF" />
                  <View style={styles.onlineDot} />
               </View>
               <View style={styles.groupInfo}>
-                 <Text style={styles.groupTitle}>Aljabar Lanjutan</Text>
-                 <Text style={styles.groupSubtitle}>Dipimpin oleh Sarah J.</Text>
-                 <Text style={styles.groupDesc}>Analisis mendalam tentang persamaan linear dan ruang vektor. Sisa 3 tempat.</Text>
+                 <Text style={[styles.groupTitle, { color: colors.text }]}>Aljabar Lanjutan</Text>
+                 <Text style={[styles.groupSubtitle, { color: colors.textSecondary }]}>Dipimpin oleh Sarah J.</Text>
+                 <Text style={[styles.groupDesc, { color: colors.textSecondary }]}>Analisis mendalam tentang persamaan linear dan ruang vektor. Sisa 3 tempat.</Text>
               </View>
             </View>
-            <View style={styles.groupFooter}>
-               <Text style={styles.groupTime}>HARI INI • 5:00 PM</Text>
-               <TouchableOpacity><Text style={styles.groupAction}>Gabung Sekarang</Text></TouchableOpacity>
+            <View style={[styles.groupFooter, { borderTopColor: colors.border }]}>
+               <Text style={[styles.groupTime, { color: colors.textSecondary }]}>HARI INI • 5:00 PM</Text>
+               <TouchableOpacity><Text style={[styles.groupAction, { color: colors.primary }]}>Gabung Sekarang</Text></TouchableOpacity>
             </View>
           </View>
 
           {/* Card 2 */}
-          <View style={styles.groupCard}>
+          <View style={[styles.groupCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.groupCardContent}>
-              <View style={styles.groupAvatar}>
+              <View style={[styles.groupAvatar, { backgroundColor: colors.avatarBg }]}>
                  <Ionicons name="person" size={20} color="#FFF" />
                  <View style={styles.onlineDot} />
               </View>
               <View style={styles.groupInfo}>
-                 <Text style={styles.groupTitle}>Python untuk Data</Text>
-                 <Text style={styles.groupSubtitle}>Dipimpin oleh Mark R.</Text>
-                 <Text style={styles.groupDesc}>Bekerja melalui tantangan visualisasi Pandas dan Matplotlib.</Text>
+                 <Text style={[styles.groupTitle, { color: colors.text }]}>Python untuk Data</Text>
+                 <Text style={[styles.groupSubtitle, { color: colors.textSecondary }]}>Dipimpin oleh Mark R.</Text>
+                 <Text style={[styles.groupDesc, { color: colors.textSecondary }]}>Bekerja melalui tantangan visualisasi Pandas dan Matplotlib.</Text>
                </View>
             </View>
-            <View style={styles.groupFooter}>
-               <Text style={styles.groupTime}>BESOK • 2:00 PM</Text>
-               <TouchableOpacity><Text style={styles.groupAction}>Lihat Grup</Text></TouchableOpacity>
+            <View style={[styles.groupFooter, { borderTopColor: colors.border }]}>
+               <Text style={[styles.groupTime, { color: colors.textSecondary }]}>BESOK • 2:00 PM</Text>
+               <TouchableOpacity><Text style={[styles.groupAction, { color: colors.primary }]}>Lihat Grup</Text></TouchableOpacity>
             </View>
           </View>
 
           {/* Create Own Group Card */}
-          <View style={styles.createGroupCard}>
+          <View style={[styles.createGroupCard, { backgroundColor: colors.primary }]}>
              <Ionicons name="people" size={32} color="#FFF" style={styles.createGroupIcon} />
              <Text style={styles.createGroupTitle}>Buat Milikmu Sendiri</Text>
              <Text style={styles.createGroupDesc}>Mulai sesi belajar dengan teman sebaya.</Text>
-             <TouchableOpacity style={styles.createGroupBtn}>
-               <Text style={styles.createGroupBtnText}>Mulai Sekarang</Text>
+             <TouchableOpacity style={[styles.createGroupBtn, { backgroundColor: '#FFF' }]}>
+               <Text style={[styles.createGroupBtnText, { color: colors.primary }]}>Mulai Sekarang</Text>
              </TouchableOpacity>
           </View>
         </View>
 
       </ScrollView>
 
-      {/* Mock Bottom Tab Bar */}
-      <View style={styles.bottomTabBar}>
-        <TouchableOpacity style={styles.tabItem}>
-          <Ionicons name="home-outline" size={24} color="#9CA3AF" />
-          <Text style={styles.tabLabel}>Beranda</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem}>
-          <Ionicons name="search-outline" size={24} color="#9CA3AF" />
-          <Text style={styles.tabLabel}>Cari</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem}>
-          <View style={styles.activeTabIconWrap}>
-            <Ionicons name="calendar" size={20} color="#4F46E5" />
-          </View>
-          <Text style={[styles.tabLabel, styles.tabLabelActive]}>Sesi</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem}>
-          <Ionicons name="chatbubbles-outline" size={24} color="#9CA3AF" />
-          <Text style={styles.tabLabel}>Chat AI</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem}>
-          <Ionicons name="person-outline" size={24} color="#9CA3AF" />
-          <Text style={styles.tabLabel}>Profil</Text>
-        </TouchableOpacity>
-      </View>
-
+      {/* Manual BottomTabBar removed */}
     </SafeAreaView>
   );
 }
@@ -655,41 +636,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 12,
   },
-  bottomTabBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 80,
-    backgroundColor: '#FFFFFF',
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'flex-start',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-  },
-  tabItem: {
-    alignItems: 'center',
-    flex: 1,
-  },
-  activeTabIconWrap: {
-    backgroundColor: '#EBE2FF',
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 20,
-    marginBottom: 4,
-  },
   tabLabel: {
     fontSize: 10,
     color: '#9CA3AF',
     marginTop: 4,
-  },
-  tabLabelActive: {
-    color: '#4F46E5',
-    fontWeight: '700',
-    marginTop: 0,
   }
 });

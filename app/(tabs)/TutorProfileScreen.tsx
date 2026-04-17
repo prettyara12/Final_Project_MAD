@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTheme } from '../../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -60,6 +61,7 @@ const REVIEWS = [
 
 export default function TutorProfileScreen() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
 
   const [selectedDate, setSelectedDate] = useState('12');
   const [selectedTime, setSelectedTime] = useState('10:30 AM');
@@ -76,102 +78,105 @@ export default function TutorProfileScreen() {
         key={i} 
         name={i < count ? "star" : "star-outline"} 
         size={14} 
-        color="#7C3AED" 
+        color={colors.primary} 
         style={styles.starIcon} 
       />
     ));
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.background }]}>
         <View style={styles.headerLeft}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color="#111827" />
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          <View style={styles.avatarMini}>
+          <View style={[styles.avatarMini, { backgroundColor: colors.avatarBg }]}>
             <Ionicons name="person" size={16} color="#FFF" />
           </View>
-          <Text style={styles.headerLogoText}>EduPartner AI</Text>
+          <Text style={[styles.headerLogoText, { color: colors.primary }]}>EduPartner AI</Text>
         </View>
-        <TouchableOpacity style={styles.notificationBtn}>
-          <Ionicons name="notifications" size={20} color="#4F46E5" />
+        <TouchableOpacity 
+          style={styles.notificationBtn}
+          onPress={() => router.push('/NotificationScreen' as any)}
+        >
+          <Ionicons name="notifications" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
         {/* Top Profile Card */}
-        <View style={styles.heroCard}>
-          <View style={styles.badgeTopLeft}>
-            <Text style={styles.badgeTopLeftText}>TERATAS</Text>
+        <View style={[styles.heroCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.badgeTopLeft, { backgroundColor: colors.primaryLight }]}>
+            <Text style={[styles.badgeTopLeftText, { color: colors.primary }]}>TERATAS</Text>
           </View>
 
           <View style={styles.avatarWrapper}>
-            <View style={styles.avatarGradientBorder}>
-              <View style={styles.avatarInner}>
-                <Ionicons name="person" size={40} color="#6B7280" />
+            <View style={[styles.avatarGradientBorder, { backgroundColor: colors.primary }]}>
+              <View style={[styles.avatarInner, { backgroundColor: colors.avatarBg }]}>
+                <Ionicons name="person" size={40} color="#FFF" />
               </View>
             </View>
           </View>
 
-          <Text style={styles.tutorName}>Dr. Sarah Jenkins</Text>
-          <Text style={styles.tutorSubject}>Matematika Lanjut & Fisika</Text>
+          <Text style={[styles.tutorName, { color: colors.text }]}>Dr. Sarah Jenkins</Text>
+          <Text style={[styles.tutorSubject, { color: colors.textSecondary }]}>Matematika Lanjut & Fisika</Text>
 
           <View style={styles.ratingRow}>
             {renderStars(5)}
-            <Text style={styles.ratingScore}>4.9</Text>
-            <Text style={styles.ratingReviews}>(124 ulasan)</Text>
+            <Text style={[styles.ratingScore, { color: colors.text }]}>4.9</Text>
+            <Text style={[styles.ratingReviews, { color: colors.textSecondary }]}>(124 ulasan)</Text>
           </View>
 
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
               <Text style={styles.statLabel}>PENGALAMAN</Text>
-              <Text style={styles.statValue}>8+ Tahun</Text>
+              <Text style={[styles.statValue, { color: colors.text }]}>8+ Tahun</Text>
             </View>
-            <View style={styles.statDivider} />
+            <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View style={styles.statBox}>
               <Text style={styles.statLabel}>TARIF</Text>
-              <Text style={styles.statValue}>$45/jam</Text>
+              <Text style={[styles.statValue, { color: colors.text }]}>$45/jam</Text>
             </View>
           </View>
         </View>
 
         {/* Subjects Taught Card */}
-        <View style={styles.cardSection}>
+        <View style={[styles.cardSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.sectionTitleRow}>
-            <Ionicons name="school" size={20} color="#4F46E5" style={styles.sectionIcon} />
-            <Text style={styles.sectionTitle}>Mata Kuliah Diajar</Text>
+            <Ionicons name="school" size={20} color={colors.primary} style={styles.sectionIcon} />
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Mata Kuliah Diajar</Text>
           </View>
           
           <View style={styles.chipsContainer}>
             {SUBJECTS.map((sub, idx) => (
-              <View key={idx} style={styles.chipItem}>
-                <Text style={styles.chipText}>{sub}</Text>
+              <View key={idx} style={[styles.chipItem, { backgroundColor: colors.border }]}>
+                <Text style={[styles.chipText, { color: colors.textSecondary }]}>{sub}</Text>
               </View>
             ))}
           </View>
         </View>
 
         {/* About Section */}
-        <View style={styles.cardSection}>
-          <Text style={styles.sectionTitle}>Tentang Dr. Jenkins</Text>
-          <Text style={styles.aboutText}>
+        <View style={[styles.cardSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Tentang Dr. Jenkins</Text>
+          <Text style={[styles.aboutText, { color: colors.textSecondary }]}>
             Saya berspesialisasi dalam membuat konsep matematika yang kompleks menjadi mudah diakses dan menarik. Dengan gelar PhD dalam Fisika Teoretis dan pengalaman mengajar selama hampir satu dekade di tingkat universitas, saya membantu mahasiswa menjembatani kesenjangan antara hafalan dan pemahaman konseptual yang sejati.{'\n\n'}
             Filosofi mengajar saya berfokus pada "Denyut Belajar"—pendekatan terstruktur yang membangun kepercayaan diri melalui tantangan bertahap dan penerapan dunia nyata dari teori-teori abstrak.
           </Text>
         </View>
 
         {/* Availability Section */}
-        <View style={styles.cardSection}>
+        <View style={[styles.cardSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.availabilityHeader}>
-            <Text style={styles.sectionTitle}>Ketersediaan</Text>
-            <View style={styles.arrowsRow}>
-              <TouchableOpacity style={styles.arrowBtn}><Ionicons name="chevron-back" size={16} color="#6B7280" /></TouchableOpacity>
-              <TouchableOpacity style={styles.arrowBtn}><Ionicons name="chevron-forward" size={16} color="#6B7280" /></TouchableOpacity>
-            </View>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Ketersediaan</Text>
+            <div style={styles.arrowsRow}>
+              <TouchableOpacity style={styles.arrowBtn}><Ionicons name="chevron-back" size={16} color={colors.textSecondary} /></TouchableOpacity>
+              <TouchableOpacity style={styles.arrowBtn}><Ionicons name="chevron-forward" size={16} color={colors.textSecondary} /></TouchableOpacity>
+            </div>
           </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.datesRow}>
@@ -180,14 +185,15 @@ export default function TutorProfileScreen() {
                 key={i} 
                 style={[
                   styles.dateItem, 
-                  selectedDate === d.date && styles.dateItemActive,
-                  d.disabled && styles.dateItemDisabled
+                  { backgroundColor: colors.border },
+                  selectedDate === d.date && [styles.dateItemActive, { backgroundColor: colors.primary }],
+                  d.disabled && [styles.dateItemDisabled, { backgroundColor: 'transparent' }]
                 ]}
                 onPress={() => !d.disabled && setSelectedDate(d.date)}
                 disabled={d.disabled}
               >
-                <Text style={[styles.dayText, selectedDate === d.date && styles.textWhite, d.disabled && styles.textDisabled]}>{d.day}</Text>
-                <Text style={[styles.dateTextNum, selectedDate === d.date && styles.textWhite, d.disabled && styles.textDisabled]}>{d.date}</Text>
+                <Text style={[styles.dayText, { color: colors.textSecondary }, selectedDate === d.date && styles.textWhite, d.disabled && styles.textDisabled]}>{d.day}</Text>
+                <Text style={[styles.dateTextNum, { color: colors.text }, selectedDate === d.date && styles.textWhite, d.disabled && styles.textDisabled]}>{d.date}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -196,39 +202,43 @@ export default function TutorProfileScreen() {
             {TIMESLOTS.map((t, i) => (
               <TouchableOpacity 
                 key={i} 
-                style={[styles.timeItem, selectedTime === t.time && styles.timeItemActive]}
+                style={[
+                  styles.timeItem, 
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                  selectedTime === t.time && [styles.timeItemActive, { backgroundColor: colors.primary, borderColor: colors.primary }]
+                ]}
                 onPress={() => setSelectedTime(t.time)}
               >
-                <Text style={[styles.timeText, selectedTime === t.time && styles.textWhite]}>{t.time}</Text>
+                <Text style={[styles.timeText, { color: colors.text }, selectedTime === t.time && styles.textWhite]}>{t.time}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
 
         {/* Reviews Section */}
-        <View style={[styles.cardSection, styles.lastSection]}>
+        <View style={[styles.cardSection, styles.lastSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.availabilityHeader}>
-            <Text style={styles.sectionTitle}>Ulasan Terbaru</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Ulasan Terbaru</Text>
             <TouchableOpacity>
-              <Text style={styles.linkText}>Lihat Semua</Text>
+              <Text style={[styles.linkText, { color: colors.primary }]}>Lihat Semua</Text>
             </TouchableOpacity>
           </View>
 
           {REVIEWS.map((rev) => (
-            <View key={rev.id} style={styles.reviewCard}>
+            <View key={rev.id} style={[styles.reviewCard, { borderTopColor: colors.border }]}>
               <View style={styles.reviewHeader}>
-                <View style={styles.reviewAvatar}>
+                <View style={[styles.reviewAvatar, { backgroundColor: colors.avatarBg }]}>
                   <Ionicons name="person" size={16} color="#FFF" />
                 </View>
                 <View style={styles.reviewerInfo}>
-                  <Text style={styles.reviewerName}>{rev.name}</Text>
-                  <Text style={styles.reviewerCourse}>{rev.course}</Text>
+                  <Text style={[styles.reviewerName, { color: colors.text }]}>{rev.name}</Text>
+                  <Text style={[styles.reviewerCourse, { color: colors.textSecondary }]}>{rev.course}</Text>
                 </View>
                 <View style={styles.reviewStars}>
                   {renderStars(rev.stars)}
                 </View>
               </View>
-              <Text style={styles.reviewTextVal}>{rev.text}</Text>
+              <Text style={[styles.reviewTextVal, { color: colors.textSecondary }]}>{rev.text}</Text>
             </View>
           ))}
         </View>
@@ -236,8 +246,8 @@ export default function TutorProfileScreen() {
       </ScrollView>
 
       {/* Fixed Bottom Button */}
-      <View style={styles.bottomBar}>
-        <TouchableOpacity style={styles.bookButton} onPress={handleBookSession}>
+      <View style={[styles.bottomBar, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
+        <TouchableOpacity style={[styles.bookButton, { backgroundColor: colors.primary }]} onPress={handleBookSession}>
           <Text style={styles.bookButtonText}>Pesan Sesi</Text>
         </TouchableOpacity>
       </View>
@@ -578,15 +588,20 @@ const styles = StyleSheet.create({
   },
   bottomBar: {
     position: 'absolute',
-    bottom: 0,
+    bottom: 80, // Sit above the persistent TabBar
     left: 0,
     right: 0,
     backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
     paddingTop: 16,
-    paddingBottom: Platform.OS === 'ios' ? 32 : 24,
+    paddingBottom: 16,
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 5,
   },
   bookButton: {
     backgroundColor: '#4F46E5',

@@ -12,9 +12,9 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { InputField } from '../components/InputField';
-import { CustomButton } from '../components/CustomButton';
-import { useProfile } from '../context/ProfileContext';
+import { InputField } from '../../components/InputField';
+import { CustomButton } from '../../components/CustomButton';
+import { useProfile } from '../../context/ProfileContext';
 
 const { width, height } = Dimensions.get('window');
 

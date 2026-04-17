@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useTheme } from '../../context/ThemeContext';
 
 // Types
 interface Notification {
@@ -80,6 +81,7 @@ const INITIAL_NOTIFICATIONS_OLD: Notification[] = [
 
 export default function NotificationScreen() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
 
   // State management
   const [silentMode, setSilentMode] = useState(false);
@@ -222,24 +224,24 @@ export default function NotificationScreen() {
   }, []);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.background }]}>
         <View style={styles.headerLeft}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-             <Ionicons name="arrow-back" size={24} color="#111827" />
+             <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          <View style={styles.avatarMini}>
+          <View style={[styles.avatarMini, { backgroundColor: colors.avatarBg }]}>
             <Ionicons name="person" size={16} color="#FFF" />
           </View>
-          <Text style={styles.headerLogoText}>EduPartner AI</Text>
+          <Text style={[styles.headerLogoText, { color: colors.primary }]}>EduPartner AI</Text>
         </View>
         <TouchableOpacity 
           style={styles.notificationBtn}
           onPress={() => Alert.alert('Notifikasi', 'Kamu sedang berada di halaman notifikasi.')}
         >
-          <Ionicons name="notifications" size={20} color="#4F46E5" />
+          <Ionicons name="notifications" size={20} color={colors.primary} />
           {newNotifications.length > 0 && (
             <View style={styles.notifBadgeCount}>
               <Text style={styles.notifBadgeCountText}>{newNotifications.length}</Text>
@@ -263,15 +265,15 @@ export default function NotificationScreen() {
         
         {/* Title Intro */}
         <View style={styles.titleSection}>
-          <Text style={styles.mainTitle}>Notifikasi</Text>
-          <Text style={styles.mainDesc}>
+          <Text style={[styles.mainTitle, { color: colors.text }]}>Notifikasi</Text>
+          <Text style={[styles.mainDesc, { color: colors.textSecondary }]}>
             Tetap terupdate dengan perjalanan belajar dan wawasan AI-mu.
           </Text>
         </View>
 
         {/* Filters/Actions */}
         <View style={styles.filterRow}>
-           <Text style={styles.filterLabel}>
+           <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>
              ALERT BARU {newNotifications.length > 0 ? `(${newNotifications.length})` : ''}
            </Text>
            <TouchableOpacity onPress={handleMarkAllRead} activeOpacity={0.6}>
@@ -285,7 +287,7 @@ export default function NotificationScreen() {
              {newNotifications.map(notif => (
                <TouchableOpacity 
                  key={notif.id} 
-                 style={styles.cardUnread}
+                 style={[styles.cardUnread, { backgroundColor: colors.card, borderColor: colors.border }]}
                  activeOpacity={0.7}
                  onPress={() => handleNotifPress(notif, true)}
                >
@@ -297,13 +299,13 @@ export default function NotificationScreen() {
                           <View style={styles.onlineDot} />
                        </View>
                      ) : (
-                       <View style={[styles.iconBox, { backgroundColor: notif.iconBg }]}>
-                          <Ionicons name={notif.iconName as any} size={20} color={notif.iconColor} />
+                       <View style={[styles.iconBox, { backgroundColor: notif.iconBg || colors.primaryLight }]}>
+                          <Ionicons name={notif.iconName as any} size={20} color={notif.iconColor || colors.primary} />
                        </View>
                      )}
                      
                      <View style={styles.cardTitleContainer}>
-                        <Text style={styles.cardTitle}>{notif.title}</Text>
+                        <Text style={[styles.cardTitle, { color: colors.text }]}>{notif.title}</Text>
                      </View>
                      
                      {notif.badge && (
@@ -319,11 +321,15 @@ export default function NotificationScreen() {
                      )}
 
                      {notif.timestamp && (
-                       <Text style={styles.cardTimestamp}>{notif.timestamp}</Text>
+                       <Text style={[styles.cardTimestamp, { color: colors.textSecondary }]}>{notif.timestamp}</Text>
                      )}
                   </View>
 
-                  <Text style={[styles.cardDesc, notif.type === 'message' && styles.italicDesc]}>
+                  <Text style={[
+                    styles.cardDesc, 
+                    { color: colors.textSecondary },
+                    notif.type === 'message' && styles.italicDesc
+                  ]}>
                      {notif.desc}
                   </Text>
 
@@ -363,14 +369,14 @@ export default function NotificationScreen() {
         ) : (
           <View style={styles.emptyNewBox}>
             <Ionicons name="checkmark-done-circle-outline" size={40} color="#10B981" />
-            <Text style={styles.emptyNewText}>Semua notifikasi telah dibaca! 🎉</Text>
-            <Text style={styles.emptyNewSubtext}>Tidak ada alert baru saat ini.</Text>
+            <Text style={[styles.emptyNewText, { color: colors.text }]}>Semua notifikasi telah dibaca! 🎉</Text>
+            <Text style={[styles.emptyNewSubtext, { color: colors.textSecondary }]}>Tidak ada alert baru saat ini.</Text>
           </View>
         )}
 
-        {/* Yesterday Label */}
+        {/* Previous Label */}
         {oldNotifications.length > 0 && (
-          <Text style={styles.kemarinLabel}>SEBELUMNYA</Text>
+          <Text style={[styles.kemarinLabel, { color: colors.textSecondary }]}>SEBELUMNYA</Text>
         )}
 
         {/* Old Notifications */}
@@ -378,31 +384,35 @@ export default function NotificationScreen() {
            {oldNotifications.map(notif => (
              <TouchableOpacity 
                key={notif.id} 
-               style={styles.cardRead}
+               style={[styles.cardRead, { backgroundColor: colors.card, borderBottomColor: colors.border }]}
                activeOpacity={0.7}
                onPress={() => handleOldNotifPress(notif)}
              >
                 <View style={styles.cardHeaderRow}>
-                   <View style={styles.iconBoxRead}>
-                      <Ionicons name={(notif.iconName || 'notifications-outline') as any} size={18} color="#6B7280" />
+                   <View style={[styles.iconBoxRead, { backgroundColor: colors.border + '40' }]}>
+                      <Ionicons name={(notif.iconName || 'notifications-outline') as any} size={18} color={colors.textSecondary} />
                    </View>
                    
                    <View style={styles.cardTitleContainer}>
-                      <Text style={styles.cardTitleRead}>{notif.title}</Text>
+                      <Text style={[styles.cardTitleRead, { color: colors.textSecondary }]}>{notif.title}</Text>
                    </View>
-                   <Ionicons name="chevron-forward" size={16} color="#D1D5DB" />
+                   <Ionicons name="chevron-forward" size={16} color={colors.border} />
                 </View>
-                <Text style={styles.cardDescRead}>{notif.desc}</Text>
+                <Text style={[styles.cardDescRead, { color: colors.textSecondary }]}>{notif.desc}</Text>
              </TouchableOpacity>
            ))}
         </View>
 
         {/* Silent Mode / Deep Work Card */}
-        <View style={[styles.silentModeCard, silentMode && styles.silentModeCardActive]}>
+        <View style={[
+          styles.silentModeCard, 
+          { backgroundColor: colors.card, borderColor: colors.border },
+          silentMode && styles.silentModeCardActive
+        ]}>
            <View style={styles.silentHeaderRow}>
              <View>
-               <Text style={styles.silentModeTitle}>Mode Senyap</Text>
-               <Text style={styles.silentModeDesc}>
+               <Text style={[styles.silentModeTitle, { color: colors.text }]}>Mode Senyap</Text>
+               <Text style={[styles.silentModeDesc, { color: colors.textSecondary }]}>
                  {silentMode 
                    ? 'Mode senyap sedang aktif. Semua notifikasi dibisukan selama 2 jam.'
                    : 'Bisukan semua notifikasi selama 2 jam ke depan untuk masuk ke Deep Work.'
@@ -418,7 +428,7 @@ export default function NotificationScreen() {
               <Ionicons 
                 name={silentMode ? 'volume-high' : 'volume-mute'} 
                 size={16} 
-                color={silentMode ? '#FFF' : '#4F46E5'} 
+                color={silentMode ? '#FFF' : colors.primary} 
                 style={{ marginRight: 6 }}
               />
               <Text style={[styles.silentModeBtnText, silentMode && styles.silentModeBtnTextActive]}>
@@ -428,30 +438,6 @@ export default function NotificationScreen() {
         </View>
 
       </ScrollView>
-
-      {/* Bottom Tab Bar */}
-      <View style={styles.bottomTabBar}>
-        <TouchableOpacity style={styles.tabItem} onPress={() => router.push('/HomeScreen' as any)}>
-          <Ionicons name="home-outline" size={24} color="#9CA3AF" />
-          <Text style={styles.tabLabel}>Beranda</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem} onPress={() => router.push('/SubjectScreen' as any)}>
-          <Ionicons name="search-outline" size={24} color="#9CA3AF" />
-          <Text style={styles.tabLabel}>Cari</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem} onPress={() => router.push('/BookingScreen' as any)}>
-          <Ionicons name="book-outline" size={24} color="#9CA3AF" />
-          <Text style={styles.tabLabel}>Sesi</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem} onPress={() => router.push('/AIChatScreen' as any)}>
-          <Ionicons name="chatbubbles-outline" size={24} color="#9CA3AF" />
-          <Text style={styles.tabLabel}>Chat AI</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.tabItem} onPress={() => router.push('/ProgressScreen' as any)}>
-          <Ionicons name="person-outline" size={24} color="#9CA3AF" />
-          <Text style={styles.tabLabel}>Profil</Text>
-        </TouchableOpacity>
-      </View>
 
     </SafeAreaView>
   );
@@ -789,26 +775,6 @@ const styles = StyleSheet.create({
   },
   silentModeBtnTextActive: {
     color: '#FFF',
-  },
-  bottomTabBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 80,
-    backgroundColor: '#FFFFFF',
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'flex-start',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-  },
-  tabItem: {
-    alignItems: 'center',
-    flex: 1,
   },
   tabLabel: {
     fontSize: 10,

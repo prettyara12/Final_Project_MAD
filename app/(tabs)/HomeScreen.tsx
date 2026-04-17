@@ -12,9 +12,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { BottomTabBar } from '../components/BottomTabBar';
-import { useProfile } from '../context/ProfileContext';
-import { useTheme } from '../context/ThemeContext';
+// import { BottomTabBar } from '../components/BottomTabBar'; <--- Removed
+import { useProfile } from '../../context/ProfileContext';
+import { useTheme } from '../../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
 
@@ -83,18 +83,18 @@ export default function HomeScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       
       {/* Top Fixed Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.background }]}>
         <View style={styles.headerLeft}>
-          <View style={styles.avatarMini}>
+          <View style={[styles.avatarMini, { backgroundColor: colors.avatarBg }]}>
             <Ionicons name="person" size={16} color="#FFF" />
           </View>
-          <Text style={styles.headerLogoText}>EduPartner AI</Text>
+          <Text style={[styles.headerLogoText, { color: colors.primary }]}>EduPartner AI</Text>
         </View>
         <TouchableOpacity style={styles.notificationBtn} onPress={() => router.push('/NotificationScreen' as any)}>
-          <Ionicons name="notifications" size={20} color="#4B5563" />
+          <Ionicons name="notifications" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
@@ -247,7 +247,7 @@ export default function HomeScreen() {
 
       </ScrollView>
 
-      <BottomTabBar activeRoute="home" />
+      {/* Manual BottomTabBar removed - handled by (tabs)/_layout.tsx */}
     </SafeAreaView>
   );
 }
@@ -293,7 +293,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   scrollContent: {
-    paddingBottom: 100, // leave space for bottom tab bar
+    paddingBottom: 110, // Adjusted for persistent tab bar
   },
   greetingSection: {
     paddingHorizontal: 20,
