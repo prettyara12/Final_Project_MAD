@@ -1,0 +1,695 @@
+import React, { useState } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  SafeAreaView, 
+  ScrollView, 
+  TouchableOpacity,
+  Dimensions,
+  Platform
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+
+const { width } = Dimensions.get('window');
+
+const DAYS = ['SEN', 'SEL', 'RAB', 'KAM', 'JUM', 'SAB', 'MIN'];
+const CALENDAR_DATES = [
+  // Padding for prev month
+  { date: '25', inactive: true }, { date: '26', inactive: true }, 
+  { date: '27', inactive: true }, { date: '28', inactive: true }, 
+  { date: '29', inactive: true }, { date: '30', inactive: true }, 
+  { date: '1', inactive: false },
+  // Row 2
+  { date: '2', inactive: false }, { date: '3', inactive: false }, 
+  { date: '4', inactive: false }, { date: '5', inactive: false }, 
+  { date: '6', inactive: false }, { date: '7', inactive: false }, 
+  { date: '8', inactive: false },
+  // Row 3
+  { date: '9', inactive: false }, { date: '10', inactive: false, active: true }, 
+  { date: '11', inactive: false }, { date: '12', inactive: false }, 
+  { date: '13', inactive: false }, { date: '14', inactive: false }, 
+  { date: '15', inactive: false },
+  // Row 4
+  { date: '16', inactive: false }, { date: '17', inactive: false }, 
+  { date: '18', inactive: false }, { date: '19', inactive: false }, 
+  { date: '20', inactive: false }, { date: '21', inactive: false }, 
+  { date: '22', inactive: false },
+  // Row 5
+  { date: '23', inactive: false }, { date: '24', inactive: false }, 
+  { date: '25', inactive: false }
+];
+
+const TIME_SLOTS = [
+  { time: '09:00 AM', tag: 'CEPAT PENUH', available: true },
+  { time: '10:30 AM', active: true, available: true },
+  { time: '01:00 PM', available: true },
+  { time: '02:30 PM', available: true },
+  { time: '04:00 PM (Terisi)', available: false, full: true },
+];
+
+export default function BookingScreen() {
+  const router = useRouter();
+  const [selectedDate, setSelectedDate] = useState('10');
+  const [selectedTime, setSelectedTime] = useState('10:30 AM');
+
+  // Dummy action for Konfirmasi Pesanan button
+  const handleConfirm = () => {
+    console.log("Confirming booking for date:", selectedDate, "at time:", selectedTime);
+    // Move to Session Screen
+    router.push('/SessionScreen' as any);
+  };
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      
+      {/* Top Header */}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+             <Ionicons name="arrow-back" size={24} color="#111827" />
+          </TouchableOpacity>
+          <View style={styles.avatarMini}>
+            <Ionicons name="person" size={16} color="#FFF" />
+          </View>
+          <Text style={styles.headerLogoText}>EduPartner AI</Text>
+        </View>
+        <TouchableOpacity style={styles.notificationBtn}>
+          <Ionicons name="notifications" size={20} color="#4B5563" />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        
+        {/* Page Title */}
+        <View style={styles.titleSection}>
+          <Text style={styles.mainTitle}>
+            Pesan Sesi{'\n'}
+            <Text style={styles.mainTitleHighlight}>Berikutnya</Text>
+          </Text>
+          <Text style={styles.mainDesc}>
+            Jadwalkan pengalaman belajar yang dipersonalisasi dengan mentor AI atau tutor sebaya kami. Amankan tempat Anda di atrium digital.
+          </Text>
+        </View>
+
+        {/* Calendar Picker */}
+        <View style={styles.calendarCard}>
+          <View style={styles.calendarHeader}>
+            <View>
+              <Text style={styles.calTitle}>Pilih Tanggal</Text>
+              <Text style={styles.calSubtitle}>Oktober 2023</Text>
+            </View>
+            <View style={styles.arrowsRow}>
+              <TouchableOpacity style={styles.arrowBtn}><Ionicons name="chevron-back" size={18} color="#6B7280" /></TouchableOpacity>
+              <TouchableOpacity style={styles.arrowBtn}><Ionicons name="chevron-forward" size={18} color="#111827" /></TouchableOpacity>
+            </View>
+          </View>
+          
+          <View style={styles.daysRow}>
+            {DAYS.map(day => (
+              <Text key={day} style={styles.dayLabel}>{day}</Text>
+            ))}
+          </View>
+
+          <View style={styles.datesGrid}>
+            {CALENDAR_DATES.map((item, idx) => {
+              const isActive = selectedDate === item.date && !item.inactive;
+              return (
+                <TouchableOpacity 
+                  key={idx}
+                  style={[
+                    styles.dateBox, 
+                    isActive && styles.dateBoxActive
+                  ]}
+                  onPress={() => {
+                    if(!item.inactive) setSelectedDate(item.date);
+                  }}
+                  disabled={item.inactive}
+                >
+                  <Text style={[
+                      styles.dateNum, 
+                      item.inactive && styles.dateNumInactive,
+                      isActive && styles.dateNumActive
+                  ]}>
+                    {item.date}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Available Slots */}
+        <View style={styles.slotsSection}>
+          <View style={styles.slotsHeader}>
+            <Ionicons name="time" size={20} color="#4F46E5" style={styles.slotsIcon} />
+            <Text style={styles.slotsTitle}>Slot Tersedia</Text>
+          </View>
+          
+          <View style={styles.slotsList}>
+            {TIME_SLOTS.map((slot, idx) => {
+              const isSelected = selectedTime === slot.time && slot.available;
+              return (
+                <TouchableOpacity 
+                  key={idx}
+                  style={[
+                    styles.slotBtn, 
+                    isSelected && styles.slotBtnActive,
+                    slot.full && styles.slotBtnFull
+                  ]}
+                  onPress={() => {
+                    if(slot.available) setSelectedTime(slot.time);
+                  }}
+                  disabled={!slot.available}
+                >
+                  <Text style={[
+                    styles.slotText,
+                    isSelected && styles.slotTextActive,
+                    slot.full && styles.slotTextFull
+                  ]}>
+                    {slot.time}
+                  </Text>
+
+                  {/* Right side Elements */}
+                  {slot.tag && (
+                    <View style={styles.slotTag}>
+                      <Text style={styles.slotTagText}>{slot.tag}</Text>
+                    </View>
+                  )}
+                  {isSelected && (
+                    <Ionicons name="checkmark-circle" size={20} color="#FFF" />
+                  )}
+                </TouchableOpacity>
+              )
+            })}
+          </View>
+        </View>
+
+        {/* Selected Session Confirmation Card */}
+        <View style={styles.confirmationCard}>
+           <Text style={styles.confSuperTitle}>SESI TERPILIH</Text>
+           <Text style={styles.confTitle}>Fisika Quantum & Model AI</Text>
+           
+           <View style={styles.confInfoRow}>
+             <Ionicons name="calendar-outline" size={16} color="#EBE2FF" />
+             <Text style={styles.confInfoText}>10 Oktober 2023</Text>
+           </View>
+           <View style={styles.confInfoRow}>
+             <Ionicons name="time-outline" size={16} color="#EBE2FF" />
+             <Text style={styles.confInfoText}>10:30 AM - 11:30 AM</Text>
+           </View>
+
+           <TouchableOpacity style={styles.confButton} onPress={handleConfirm}>
+              <Text style={styles.confButtonText}>Konfirmasi Pesanan</Text>
+           </TouchableOpacity>
+        </View>
+
+        {/* Recommended Groups */}
+        <View style={styles.groupsSection}>
+          <Text style={styles.groupsHeader}>
+            Grup{'\n'}Belajar <Text style={styles.groupsHeaderHighlight}>Direkomendasikan</Text>
+          </Text>
+          
+          {/* Card 1 */}
+          <View style={styles.groupCard}>
+            <View style={styles.groupCardContent}>
+              <View style={styles.groupAvatar}>
+                 <Ionicons name="person" size={20} color="#FFF" />
+                 <View style={styles.onlineDot} />
+              </View>
+              <View style={styles.groupInfo}>
+                 <Text style={styles.groupTitle}>Aljabar Lanjutan</Text>
+                 <Text style={styles.groupSubtitle}>Dipimpin oleh Sarah J.</Text>
+                 <Text style={styles.groupDesc}>Analisis mendalam tentang persamaan linear dan ruang vektor. Sisa 3 tempat.</Text>
+              </View>
+            </View>
+            <View style={styles.groupFooter}>
+               <Text style={styles.groupTime}>HARI INI • 5:00 PM</Text>
+               <TouchableOpacity><Text style={styles.groupAction}>Gabung Sekarang</Text></TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Card 2 */}
+          <View style={styles.groupCard}>
+            <View style={styles.groupCardContent}>
+              <View style={styles.groupAvatar}>
+                 <Ionicons name="person" size={20} color="#FFF" />
+                 <View style={styles.onlineDot} />
+              </View>
+              <View style={styles.groupInfo}>
+                 <Text style={styles.groupTitle}>Python untuk Data</Text>
+                 <Text style={styles.groupSubtitle}>Dipimpin oleh Mark R.</Text>
+                 <Text style={styles.groupDesc}>Bekerja melalui tantangan visualisasi Pandas dan Matplotlib.</Text>
+               </View>
+            </View>
+            <View style={styles.groupFooter}>
+               <Text style={styles.groupTime}>BESOK • 2:00 PM</Text>
+               <TouchableOpacity><Text style={styles.groupAction}>Lihat Grup</Text></TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Create Own Group Card */}
+          <View style={styles.createGroupCard}>
+             <Ionicons name="people" size={32} color="#FFF" style={styles.createGroupIcon} />
+             <Text style={styles.createGroupTitle}>Buat Milikmu Sendiri</Text>
+             <Text style={styles.createGroupDesc}>Mulai sesi belajar dengan teman sebaya.</Text>
+             <TouchableOpacity style={styles.createGroupBtn}>
+               <Text style={styles.createGroupBtnText}>Mulai Sekarang</Text>
+             </TouchableOpacity>
+          </View>
+        </View>
+
+      </ScrollView>
+
+      {/* Mock Bottom Tab Bar */}
+      <View style={styles.bottomTabBar}>
+        <TouchableOpacity style={styles.tabItem}>
+          <Ionicons name="home-outline" size={24} color="#9CA3AF" />
+          <Text style={styles.tabLabel}>Beranda</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.tabItem}>
+          <Ionicons name="search-outline" size={24} color="#9CA3AF" />
+          <Text style={styles.tabLabel}>Cari</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.tabItem}>
+          <View style={styles.activeTabIconWrap}>
+            <Ionicons name="calendar" size={20} color="#4F46E5" />
+          </View>
+          <Text style={[styles.tabLabel, styles.tabLabelActive]}>Sesi</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.tabItem}>
+          <Ionicons name="chatbubbles-outline" size={24} color="#9CA3AF" />
+          <Text style={styles.tabLabel}>Chat AI</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.tabItem}>
+          <Ionicons name="person-outline" size={24} color="#9CA3AF" />
+          <Text style={styles.tabLabel}>Profil</Text>
+        </TouchableOpacity>
+      </View>
+
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#FAFAFC', // very light gray-purple tint
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'android' ? 40 : 16,
+    paddingBottom: 16,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  backButton: {
+    marginRight: 10,
+    padding: 4,
+  },
+  avatarMini: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#1E293B',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  headerLogoText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#4F46E5',
+  },
+  notificationBtn: {
+    padding: 8,
+  },
+  scrollContent: {
+    paddingBottom: 100, // space for tab bar
+  },
+  titleSection: {
+    paddingHorizontal: 20,
+    marginTop: 10,
+    marginBottom: 24,
+  },
+  mainTitle: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#111827',
+    lineHeight: 40,
+    marginBottom: 12,
+  },
+  mainTitleHighlight: {
+    color: '#4F46E5',
+  },
+  mainDesc: {
+    fontSize: 14,
+    color: '#4B5563',
+    lineHeight: 22,
+  },
+  calendarCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 32,
+    marginHorizontal: 20,
+    padding: 24,
+    marginBottom: 32,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  calTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  calSubtitle: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  arrowsRow: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  arrowBtn: {
+    padding: 4,
+  },
+  daysRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  dayLabel: {
+    width: width * 0.1,
+    textAlign: 'center',
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  datesGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  dateBox: {
+    width: width * 0.1,
+    height: width * 0.1,
+    marginBottom: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 18,
+  },
+  dateBoxActive: {
+    backgroundColor: '#4F46E5',
+    shadowColor: '#4F46E5',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  dateNum: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  dateNumInactive: {
+    color: '#D1D5DB', // greyed out
+  },
+  dateNumActive: {
+    color: '#FFFFFF',
+  },
+  slotsSection: {
+    paddingHorizontal: 20,
+    marginBottom: 32,
+  },
+  slotsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  slotsIcon: {
+    marginRight: 8,
+  },
+  slotsTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  slotsList: {
+    gap: 12,
+  },
+  slotBtn: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.02,
+    shadowRadius: 5,
+    elevation: 1,
+  },
+  slotBtnActive: {
+    backgroundColor: '#4F46E5',
+  },
+  slotBtnFull: {
+    backgroundColor: '#F9FAFB', // grey bg
+    opacity: 0.6,
+  },
+  slotText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  slotTextActive: {
+    color: '#FFFFFF',
+  },
+  slotTextFull: {
+    color: '#9CA3AF',
+  },
+  slotTag: {
+    backgroundColor: '#F3E8FF',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  slotTagText: {
+    color: '#9333EA',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  confirmationCard: {
+    backgroundColor: '#7C3AED',
+    marginHorizontal: 20,
+    borderRadius: 32,
+    padding: 24,
+    marginBottom: 40,
+  },
+  confSuperTitle: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#EBE2FF',
+    letterSpacing: 1,
+    marginBottom: 12,
+  },
+  confTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 16,
+    lineHeight: 28,
+  },
+  confInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  confInfoText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    marginLeft: 8,
+  },
+  confButton: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  confButtonText: {
+    color: '#4F46E5',
+    fontWeight: '800',
+    fontSize: 14,
+  },
+  groupsSection: {
+    paddingHorizontal: 20,
+  },
+  groupsHeader: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#111827',
+    marginBottom: 20,
+    lineHeight: 30,
+  },
+  groupsHeaderHighlight: {
+    color: '#9333EA', // purple tint
+  },
+  groupCard: {
+    backgroundColor: '#F3F4F6', // light gray
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 16,
+  },
+  groupCardContent: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  groupAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#1E293B',
+    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  onlineDot: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 12,
+    height: 12,
+    backgroundColor: '#10B981',
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#F3F4F6',
+  },
+  groupInfo: {
+    flex: 1,
+  },
+  groupTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  groupSubtitle: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 8,
+  },
+  groupDesc: {
+    fontSize: 12,
+    color: '#4B5563',
+    lineHeight: 18,
+  },
+  groupFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  groupTime: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#9333EA', // purple
+  },
+  groupAction: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#4F46E5', // blue link
+  },
+  createGroupCard: {
+    backgroundColor: '#A855F7', // bright purple/pink gradient sim
+    borderRadius: 32,
+    padding: 24,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  createGroupIcon: {
+    marginBottom: 12,
+  },
+  createGroupTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 6,
+  },
+  createGroupDesc: {
+    fontSize: 12,
+    color: '#EBE2FF',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  createGroupBtn: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 20,
+  },
+  createGroupBtnText: {
+    color: '#9333EA',
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  bottomTabBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 80,
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'flex-start',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+  },
+  tabItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  activeTabIconWrap: {
+    backgroundColor: '#EBE2FF',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginBottom: 4,
+  },
+  tabLabel: {
+    fontSize: 10,
+    color: '#9CA3AF',
+    marginTop: 4,
+  },
+  tabLabelActive: {
+    color: '#4F46E5',
+    fontWeight: '700',
+    marginTop: 0,
+  }
+});
