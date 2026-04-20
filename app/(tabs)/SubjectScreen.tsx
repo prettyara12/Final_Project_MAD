@@ -1,248 +1,298 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  SafeAreaView, 
-  ScrollView, 
-  TextInput, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
+  TextInput,
   TouchableOpacity,
-  Dimensions,
+  Alert,
+  Image,
   Platform,
-  Alert
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../context/ThemeContext';
-// import { BottomTabBar } from '../components/BottomTabBar';
 
-const { width } = Dimensions.get('window');
+type Session = {
+  id: string;
+  mentorName: string;
+  subject: string;
+  date: string;
+  time: string;
+  duration: string;
+  status: 'Mendatang' | 'Berlangsung' | 'Selesai';
+  themeColor: string;
+  avatar: string;
+};
 
-const INITIAL_SUBJECTS = [
+const SESSIONS: Session[] = [
   {
     id: '1',
-    title: 'Matematika Lanjutan',
-    desc: 'Aljabar Linear, Kalkulus III, dan Persamaan Diferensial.',
-    progress: 72,
-    badge: 'AKTIF',
-    actionText: 'Buka Meja Belajar',
-    themeColor: '#4F46E5', // blue/purple
-    icon: 'calculator-outline'
+    mentorName: 'Dr. Sarah Jenkins',
+    subject: 'Kalkulus Lanjutan',
+    date: 'Hari ini',
+    time: '14:00 - 15:30',
+    duration: '90 menit',
+    status: 'Berlangsung',
+    themeColor: '#4F46E5',
+    avatar: 'SJ',
   },
   {
     id: '2',
-    title: 'Psikologi Kognitif',
-    desc: 'Sistem memori, atensi, dan teori persepsi.',
-    progress: 45,
-    badge: 'PERSIAPAN UJIAN',
-    actionText: 'Lanjutkan Membaca',
-    themeColor: '#9333EA', // purple
-    icon: 'brain'
-  }
+    mentorName: 'James Wilson',
+    subject: 'Python & Data Science',
+    date: 'Hari ini',
+    time: '17:00 - 18:00',
+    duration: '60 menit',
+    status: 'Mendatang',
+    themeColor: '#9333EA',
+    avatar: 'JW',
+  },
+  {
+    id: '3',
+    mentorName: 'Maria Garcia',
+    subject: 'Desain UI/UX',
+    date: 'Besok',
+    time: '10:00 - 11:30',
+    duration: '90 menit',
+    status: 'Mendatang',
+    themeColor: '#0EA5E9',
+    avatar: 'MG',
+  },
+  {
+    id: '4',
+    mentorName: 'Dr. Ahmad Yani',
+    subject: 'Fisika Kuantum',
+    date: '24 Okt',
+    time: '13:00 - 14:00',
+    duration: '60 menit',
+    status: 'Selesai',
+    themeColor: '#10B981',
+    avatar: 'AY',
+  },
+  {
+    id: '5',
+    mentorName: 'Lisa Tanaka',
+    subject: 'Bahasa Inggris Akademik',
+    date: '22 Okt',
+    time: '09:00 - 10:00',
+    duration: '60 menit',
+    status: 'Selesai',
+    themeColor: '#F59E0B',
+    avatar: 'LT',
+  },
 ];
 
-const CATEGORIES = [
-  { id: '1', title: 'AI & Etika', desc: 'Implikasi filosofis dari kecerdasan mesin.', files: 12, icon: 'hardware-chip' },
-  { id: '2', title: 'Biologi Molekuler', desc: 'Dasar-dasar CRISPR dan rekayasa genetika.', files: 8, icon: 'flask' },
-  { id: '3', title: 'Perencanaan Wilayah', desc: 'Desain kota berkelanjutan dan infrastruktur.', files: 15, icon: 'business' }
-];
+const STATUS_FILTERS = ['Semua', 'Mendatang', 'Berlangsung', 'Selesai'];
 
-const RECENT_NOTES = [
-  { id: '1', title: 'Intro Jaringan Syaraf', time: 'Dibuat 2 jam lalu • Studi AI', icon: 'document-text' },
-  { id: '2', title: 'Hukum Termodinamika', time: 'Diperbarui kemarin • Fisika', icon: 'document' },
-  { id: '3', title: 'Aliran Seni Renaisans', time: 'Diperbarui 3 hari lalu • Sejarah', icon: 'color-palette' },
-];
+const SB_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0;
 
-export default function SubjectScreen() {
+export default function SessionScreen() {
   const router = useRouter();
-  const { colors, isDark } = useTheme();
-  const [subjects, setSubjects] = useState(INITIAL_SUBJECTS);
+  const { colors } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState('Semua');
 
-  const handleAddSubject = () => {
-    // Basic local state append to satisfy requirement
-    // In a real app we'd open a modal. Here we just push a dummy.
-    Alert.alert(
-      "Tambah Mata Kuliah",
-      "Apakah Anda ingin menambahkan kelas dummy 'Struktur Data & Algoritma'?",
-      [
-        { text: "Batal", style: "cancel" },
-        { 
-          text: "Tambah", 
-          onPress: () => {
-            const newSub = {
-              id: Date.now().toString(),
-              title: 'Struktur Data & Algoritma',
-              desc: 'Array, Linked List, Tree, Graph, dan Kompleksitas.',
-              progress: 0,
-              badge: 'BARU',
-              actionText: 'Mulai Belajar',
-              themeColor: '#10B981',
-              icon: 'code-slash'
-            };
-            setSubjects([newSub, ...subjects]);
-          }
-        }
-      ]
-    );
+  const filteredSessions = SESSIONS.filter((s) => {
+    const matchSearch =
+      s.mentorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.subject.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchFilter = activeFilter === 'Semua' || s.status === activeFilter;
+    return matchSearch && matchFilter;
+  });
+
+  const handleJoinSession = (session: Session) => {
+    if (session.status === 'Selesai') {
+      Alert.alert('Sesi Selesai', 'Sesi ini telah berakhir. Lihat rekaman di riwayat belajarmu.');
+    } else {
+      Alert.alert(
+        'Bergabung ke Sesi',
+        `Bergabung dengan ${session.mentorName} untuk sesi "${session.subject}"?\n\nWaktu: ${session.time}`,
+        [
+          { text: 'Batal', style: 'cancel' },
+          { text: 'Bergabung', onPress: () => Alert.alert('✅ Berhasil', 'Kamu telah bergabung ke sesi!') },
+        ]
+      );
+    }
+  };
+
+  const getStatusStyle = (status: Session['status']) => {
+    switch (status) {
+      case 'Berlangsung': return { bg: '#DCFCE7', text: '#16A34A' };
+      case 'Mendatang':   return { bg: '#EBE2FF', text: '#7C3AED' };
+      case 'Selesai':     return { bg: '#F3F4F6', text: '#6B7280' };
+    }
+  };
+
+  const getActionLabel = (status: Session['status']) => {
+    switch (status) {
+      case 'Berlangsung': return 'Masuk Sekarang';
+      case 'Mendatang':   return 'Lihat Detail';
+      case 'Selesai':     return 'Lihat Rekaman';
+    }
   };
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      
-      {/* Top Header */}
-      <View style={[styles.header, { backgroundColor: colors.background }]}>
-        <View style={styles.headerLeft}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-             <Ionicons name="arrow-back" size={24} color={colors.text} />
+      <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+
+      {/* ── HEADER: 2 baris ── */}
+      <View style={[styles.header, { backgroundColor: colors.background, paddingTop: SB_HEIGHT + 12 }]}>
+
+        {/* Baris 1: tombol back (kiri) + notifikasi (kanan) */}
+        <View style={styles.headerTopRow}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={22} color={colors.text} />
           </TouchableOpacity>
-          <View style={[styles.avatarMini, { backgroundColor: colors.avatarBg }]}>
-            <Ionicons name="person" size={16} color="#FFF" />
-          </View>
-          <Text style={[styles.headerLogoText, { color: colors.primary }]}>EduPartner AI</Text>
+          <TouchableOpacity
+            style={[styles.notifBtn, { backgroundColor: '#F3F4F6' }]}
+            onPress={() => router.push('/NotificationScreen' as any)}
+          >
+            <Ionicons name="notifications" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity 
-          style={styles.notificationBtn}
-          onPress={() => router.push('/NotificationScreen' as any)}
-        >
-          <Ionicons name="notifications" size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
+
+        {/* Baris 2: logo di bawah tombol back, rapat kiri */}
+        <Image
+          source={require('../../assets/images/logo.jpeg')}
+          style={styles.logoImage}
+        />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
-        {/* Title Section */}
+
+        {/* Title */}
         <View style={styles.titleSection}>
-           <Text style={[styles.mainTitle, { color: colors.text }]}>Manajemen Mata{'\n'}Kuliah</Text>
-           <Text style={[styles.mainDesc, { color: colors.textSecondary }]}>Atur perjalanan akademikmu dengan wawasan bertenaga AI.</Text>
-           
-           <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-             <Ionicons name="search" size={20} color={colors.textSecondary} />
-             <TextInput 
-               style={[styles.searchInput, { color: colors.text }]}
-               placeholder="Cari mata kuliah atau materi..."
-               placeholderTextColor={colors.textSecondary}
-               value={searchQuery}
-               onChangeText={setSearchQuery}
-             />
-           </View>
+          <Text style={[styles.mainTitle, { color: colors.text }]}>Sesi Belajar{'\n'}dengan Mentor</Text>
+          <Text style={[styles.mainDesc, { color: colors.textSecondary }]}>
+            Kelola jadwal dan riwayat sesi belajarmu bersama mentor.
+          </Text>
+
+          {/* Search */}
+          <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Ionicons name="search" size={18} color={colors.textSecondary} />
+            <TextInput
+              style={[styles.searchInput, { color: colors.text }]}
+              placeholder="Cari mentor atau mata kuliah..."
+              placeholderTextColor={colors.textSecondary}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
-        {/* Subjects List (Large Cards) */}
-        <View style={styles.cardsSection}>
-          {subjects.map((sub, idx) => (
-            <View key={sub.id} style={[styles.subjectCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-               <View style={styles.subHeaderRow}>
-                 <View style={[styles.subIconBox, { backgroundColor: sub.themeColor + '15' }]}>
-                    <Ionicons name={sub.icon as any} size={20} color={sub.themeColor} />
-                 </View>
-                 <View style={[styles.badgeBox, { backgroundColor: colors.primaryLight }]}>
-                   <Text style={[styles.badgeText, { color: colors.primary }]}>{sub.badge}</Text>
-                 </View>
-               </View>
+        {/* Summary Cards */}
+        <View style={styles.summaryRow}>
+          <View style={[styles.summaryCard, { backgroundColor: '#EBE2FF' }]}>
+            <Text style={styles.summaryNumber}>3</Text>
+            <Text style={styles.summaryLabel}>Sesi Mendatang</Text>
+          </View>
+          <View style={[styles.summaryCard, { backgroundColor: '#DCFCE7' }]}>
+            <Text style={[styles.summaryNumber, { color: '#16A34A' }]}>1</Text>
+            <Text style={[styles.summaryLabel, { color: '#16A34A' }]}>Sedang Berlangsung</Text>
+          </View>
+          <View style={[styles.summaryCard, { backgroundColor: '#F3F4F6' }]}>
+            <Text style={[styles.summaryNumber, { color: '#6B7280' }]}>12</Text>
+            <Text style={[styles.summaryLabel, { color: '#6B7280' }]}>Total Selesai</Text>
+          </View>
+        </View>
 
-               <Text style={[styles.subTitle, { color: colors.text }]}>{sub.title}</Text>
-               <Text style={[styles.subDesc, { color: colors.textSecondary }]}>{sub.desc}</Text>
-
-               <View style={styles.progressRow}>
-                 <Text style={[styles.progressLabel, { color: colors.textSecondary }]}>Kemajuan Kursus</Text>
-                 <Text style={[styles.progressLabel, { color: sub.themeColor }]}>{sub.progress}%</Text>
-               </View>
-               <View style={[styles.progressBarBg, { backgroundColor: colors.border }]}>
-                 <View style={[styles.progressBarFill, { width: `${sub.progress}%`, backgroundColor: sub.themeColor }]} />
-               </View>
-
-               <View style={styles.actionsRow}>
-                 <TouchableOpacity 
-                   style={[styles.mainActionBtn, { backgroundColor: sub.themeColor }]}
-                   onPress={() => router.push('/SubjectDetailScreen' as any)}
-                 >
-                   <Text style={styles.mainActionText}>{sub.actionText}</Text>
-                 </TouchableOpacity>
-                 <TouchableOpacity style={[styles.moreActionBtn, { borderColor: colors.border }]}>
-                   <Ionicons name="ellipsis-horizontal" size={20} color={colors.textSecondary} />
-                 </TouchableOpacity>
-               </View>
-            </View>
+        {/* Filter Tabs */}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterRow}>
+          {STATUS_FILTERS.map((f) => (
+            <TouchableOpacity
+              key={f}
+              style={[
+                styles.filterChip,
+                activeFilter === f
+                  ? { backgroundColor: '#4F46E5' }
+                  : { backgroundColor: colors.card, borderColor: colors.border, borderWidth: 1 },
+              ]}
+              onPress={() => setActiveFilter(f)}
+            >
+              <Text style={[
+                styles.filterChipText,
+                { color: activeFilter === f ? '#FFFFFF' : colors.textSecondary },
+              ]}>
+                {f}
+              </Text>
+            </TouchableOpacity>
           ))}
-        </View>
+        </ScrollView>
 
-        {/* Topik Terkategorisasi */}
-        <View style={styles.sectionHeader}>
-           <Text style={[styles.sectionTitle, { color: colors.text }]}>Topik Terkategorisasi</Text>
-        </View>
-        <View style={styles.categorySection}>
-           {CATEGORIES.map(cat => (
-             <View key={cat.id} style={[styles.categoryCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <View style={styles.catHeader}>
-                   <View style={[styles.catIconBox, { backgroundColor: colors.primaryLight }]}>
-                     <Ionicons name={cat.icon as any} size={16} color={colors.primary} />
-                   </View>
-                   <View style={[styles.catFileBadge, { backgroundColor: colors.avatarBg }]}>
-                      <Text style={styles.catFileText}>{cat.files} File</Text>
-                   </View>
+        {/* Session List */}
+        <View style={styles.listSection}>
+          {filteredSessions.map((session) => {
+            const ss = getStatusStyle(session.status);
+            return (
+              <View
+                key={session.id}
+                style={[
+                  styles.sessionCard,
+                  { backgroundColor: colors.card, borderColor: colors.border, borderLeftColor: session.themeColor },
+                ]}
+              >
+                <View style={styles.cardTop}>
+                  <View style={[styles.avatar, { backgroundColor: session.themeColor }]}>
+                    <Text style={styles.avatarText}>{session.avatar}</Text>
+                  </View>
+                  <View style={styles.cardInfo}>
+                    <Text style={[styles.mentorName, { color: colors.text }]}>{session.mentorName}</Text>
+                    <Text style={[styles.subjectName, { color: colors.textSecondary }]}>{session.subject}</Text>
+                  </View>
+                  <View style={[styles.statusBadge, { backgroundColor: ss.bg }]}>
+                    <Text style={[styles.statusText, { color: ss.text }]}>{session.status}</Text>
+                  </View>
                 </View>
-                <Text style={[styles.catTitle, { color: colors.text }]}>{cat.title}</Text>
-                <Text style={[styles.catDesc, { color: colors.textSecondary }]}>{cat.desc}</Text>
-             </View>
-           ))}
-        </View>
 
-        {/* Unggah Materi (Upload Block) */}
-        <View style={[styles.uploadBlock, { backgroundColor: colors.primary }]}>
-           <Text style={styles.uploadTitle}>Unggah Materi</Text>
-           <Text style={styles.uploadDesc}>
-              Unggah PDF, catatan kuliah, atau gambar. AI kami akan secara otomatis mengkategorikannya ke dalam topik.
-           </Text>
-           
-           <TouchableOpacity style={[styles.uploadBoxDashed, { borderColor: '#FFF' }]}>
-              <View style={[styles.uploadIconCircle, { backgroundColor: colors.primaryLight }]}>
-                 <Ionicons name="cloud-upload" size={24} color={colors.primary} />
+                <View style={[styles.detailsRow, { borderTopColor: colors.border }]}>
+                  <View style={styles.detailItem}>
+                    <Ionicons name="calendar-outline" size={12} color={colors.textSecondary} />
+                    <Text style={[styles.detailText, { color: colors.textSecondary }]}>{session.date}</Text>
+                  </View>
+                  <View style={styles.detailItem}>
+                    <Ionicons name="time-outline" size={12} color={colors.textSecondary} />
+                    <Text style={[styles.detailText, { color: colors.textSecondary }]}>{session.time}</Text>
+                  </View>
+                  <View style={styles.detailItem}>
+                    <Ionicons name="hourglass-outline" size={12} color={colors.textSecondary} />
+                    <Text style={[styles.detailText, { color: colors.textSecondary }]}>{session.duration}</Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.actionBtn, { backgroundColor: session.themeColor }]}
+                  onPress={() => handleJoinSession(session)}
+                >
+                  <Text style={styles.actionBtnText}>{getActionLabel(session.status)}</Text>
+                </TouchableOpacity>
               </View>
-              <Text style={styles.uploadBoxTitle}>Tarik file ke sini atau klik untuk mencari</Text>
-              <Text style={styles.uploadBoxSub}>Dukung PDF, DOCX, PNG (Maks 50MB)</Text>
-           </TouchableOpacity>
-
-           {/* Upload Progress Mock */}
-           <View style={[styles.uploadProgressRow, { backgroundColor: 'rgba(255,255,255,0.1)' }]}>
-              <Ionicons name="document-text" size={16} color="#FFF" style={{marginRight: 8}} />
-              <View style={{ flex: 1 }}>
-                 <Text style={styles.uploadFileName}>Midterm_Review.pdf</Text>
-                 <View style={[styles.uploadProbBarLine, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-                    <View style={[styles.uploadProbBarFill, { backgroundColor: '#FFF' }]} />
-                 </View>
-              </View>
-              <Text style={styles.uploadFilePercent}>86%</Text>
-           </View>
+            );
+          })}
         </View>
 
-        {/* Catatan Terbaru */}
-        <View style={styles.lastSection}>
-           <View style={styles.sectionHeaderLine}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Catatan Terbaru</Text>
-              <TouchableOpacity><Text style={[styles.linkText, { color: colors.primary }]}>Lihat Semua</Text></TouchableOpacity>
-           </View>
-
-           {RECENT_NOTES.map(note => (
-             <View key={note.id} style={[styles.noteRow, { borderBottomColor: colors.border }]}>
-                <View style={[styles.noteIconCircle, { backgroundColor: colors.primaryLight }]}>
-                   <Ionicons name={note.icon as any} size={16} color={colors.primary} />
-                </View>
-                <View style={styles.noteInfo}>
-                   <Text style={[styles.noteTitle, { color: colors.text }]}>{note.title}</Text>
-                   <Text style={[styles.noteTime, { color: colors.textSecondary }]}>{note.time}</Text>
-                </View>
-             </View>
-           ))}
-        </View>
+        {/* Book New Session */}
+        <TouchableOpacity
+          style={styles.bookBlock}
+          onPress={() => router.push('/BookSessionScreen' as any)}
+          activeOpacity={0.85}
+        >
+          <View style={styles.bookBlockLeft}>
+            <Text style={styles.bookBlockTitle}>Jadwalkan Sesi Baru</Text>
+            <Text style={styles.bookBlockDesc}>Temukan mentor dan pilih waktu yang sesuai denganmu.</Text>
+          </View>
+          <Ionicons name="add-circle" size={36} color="rgba(255,255,255,0.8)" />
+        </TouchableOpacity>
 
       </ScrollView>
-
-      <TouchableOpacity style={styles.fabBtn} onPress={handleAddSubject}>
-         <Ionicons name="add" size={28} color="#FFF" />
-      </TouchableOpacity>
-
-      {/* Manual BottomTabBar removed */}
     </SafeAreaView>
   );
 }
@@ -250,365 +300,220 @@ export default function SubjectScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FAFAFC', 
   },
+
+  // ── HEADER: kolom vertikal ───────────────────────────────────────
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    // flexDirection default = 'column' → baris 1 dan baris 2 menumpuk ke bawah
     paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'android' ? 40 : 16,
-    paddingBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E5E7EB',
   },
-  headerLeft: {
+  headerTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between', // back kiri, notif kanan
+    marginBottom: 10,                // jarak ke logo di bawahnya
   },
-  backButton: {
-    marginRight: 10,
-    padding: 4,
-  },
-  avatarMini: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#1E293B',
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 8,
   },
-  headerLogoText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#4F46E5',
+  notifBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  notificationBtn: {
-    padding: 8,
+  logoImage: {
+    width: 44,   // pas ukuran logo → tidak ada ruang kosong → otomatis rapat kiri
+    height: 44,
+    borderRadius: 8,
+    alignSelf: 'flex-start', // pastikan logo menempel ke kiri
   },
+
+  // ── SCROLL ──────────────────────────────────────────────────────
   scrollContent: {
-    paddingBottom: 160, // accommodate fab and tab bar space
+    paddingBottom: 40,
   },
+
+  // ── TITLE ───────────────────────────────────────────────────────
   titleSection: {
     paddingHorizontal: 20,
-    marginTop: 10,
+    marginTop: 20,
     marginBottom: 24,
   },
   mainTitle: {
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: '900',
-    color: '#111827',
-    lineHeight: 38,
+    lineHeight: 36,
     marginBottom: 8,
   },
   mainDesc: {
     fontSize: 14,
-    color: '#4B5563',
     lineHeight: 20,
     marginBottom: 20,
   },
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F3F4F6', // light grey like input
     borderRadius: 24,
+    borderWidth: 1,
     paddingHorizontal: 16,
     paddingVertical: 12,
+    gap: 8,
   },
   searchInput: {
     flex: 1,
-    marginLeft: 8,
     fontSize: 14,
-    color: '#111827',
   },
-  cardsSection: {
-    paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  subjectCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 32,
-    padding: 24,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.03,
-    shadowRadius: 10,
-    elevation: 2,
-  },
-  subHeaderRow: {
+
+  // ── SUMMARY ─────────────────────────────────────────────────────
+  summaryRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    gap: 10,
+    marginBottom: 24,
+  },
+  summaryCard: {
+    flex: 1,
+    borderRadius: 20,
+    padding: 14,
+    alignItems: 'center',
+  },
+  summaryNumber: {
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#7C3AED',
+    marginBottom: 4,
+  },
+  summaryLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#7C3AED',
+    textAlign: 'center',
+  },
+
+  // ── FILTER ──────────────────────────────────────────────────────
+  filterRow: {
+    paddingHorizontal: 20,
+    gap: 10,
+    marginBottom: 20,
+  },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  filterChipText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+
+  // ── SESSION LIST ─────────────────────────────────────────────────
+  listSection: {
+    paddingHorizontal: 20,
+    gap: 16,
+    marginBottom: 24,
+  },
+  sessionCard: {
+    borderRadius: 24,
+    borderWidth: 1,
+    borderLeftWidth: 4,
+    padding: 20,
+  },
+  cardTop: {
+    flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 16,
+    gap: 12,
   },
-  subIconBox: {
+  avatar: {
     width: 44,
     height: 44,
-    borderRadius: 16,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  badgeBox: {
-    backgroundColor: '#F3E8FF',
+  avatarText: {
+    color: '#FFF',
+    fontSize: 13,
+    fontWeight: '800',
+  },
+  cardInfo: {
+    flex: 1,
+  },
+  mentorName: {
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  subjectName: {
+    fontSize: 12,
+  },
+  statusBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
   },
-  badgeText: {
-    color: '#9333EA',
+  statusText: {
     fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 0.5,
+    fontWeight: '700',
   },
-  subTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#111827',
-    marginBottom: 8,
-  },
-  subDesc: {
-    fontSize: 13,
-    color: '#6B7280',
-    lineHeight: 20,
-    marginBottom: 20,
-  },
-  progressRow: {
+  detailsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    borderTopWidth: 1,
+    paddingTop: 14,
+    marginBottom: 14,
   },
-  progressLabel: {
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  detailText: {
     fontSize: 11,
-    fontWeight: '600',
-    color: '#4B5563',
   },
-  progressBarBg: {
-    height: 8,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 4,
-    marginBottom: 20,
-  },
-  progressBarFill: {
-    height: 8,
-    borderRadius: 4,
-  },
-  actionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  mainActionBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 20,
-    alignItems: 'center',
-  },
-  mainActionText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  moreActionBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  sectionHeader: {
-    paddingHorizontal: 20,
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#111827',
-  },
-  categorySection: {
-    paddingHorizontal: 20,
-    marginBottom: 32,
-    gap: 16,
-  },
-  categoryCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02,
-    shadowRadius: 5,
-    elevation: 1,
-  },
-  catHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  catIconBox: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  catFileBadge: {
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  catFileText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#6B7280',
-  },
-  catTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  catDesc: {
-    fontSize: 12,
-    color: '#6B7280',
-    lineHeight: 18,
-  },
-  uploadBlock: {
-    backgroundColor: '#4F46E5', // blue/purple main
-    marginHorizontal: 20,
-    borderRadius: 32,
-    padding: 24,
-    marginBottom: 32,
-  },
-  uploadTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginBottom: 8,
-  },
-  uploadDesc: {
-    fontSize: 13,
-    color: '#E0E7FF', // lighter blue text
-    lineHeight: 20,
-    marginBottom: 24,
-  },
-  uploadBoxDashed: {
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderStyle: 'dashed',
-    borderRadius: 24,
-    padding: 20,
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  uploadIconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  uploadBoxTitle: {
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
-    marginBottom: 4,
-  },
-  uploadBoxSub: {
-    color: '#A5B4FC', // faint blue purple
-    fontSize: 10,
-  },
-  uploadProgressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.15)',
+  actionBtn: {
     padding: 12,
     borderRadius: 16,
+    alignItems: 'center',
   },
-  uploadFileName: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
+  actionBtnText: {
+    color: '#FFF',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+
+  // ── BOOK BLOCK ───────────────────────────────────────────────────
+  bookBlock: {
+    marginHorizontal: 20,
+    borderRadius: 28,
+    padding: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#4F46E5',
+  },
+  bookBlockLeft: {
+    flex: 1,
+    marginRight: 16,
+  },
+  bookBlockTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#FFF',
     marginBottom: 6,
   },
-  uploadProbBarLine: {
-    height: 4,
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 2,
-    width: '100%',
-  },
-  uploadProbBarFill: {
-    width: '86%',
-    height: 4,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 2,
-  },
-  uploadFilePercent: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '700',
-    marginLeft: 12,
-  },
-  lastSection: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
-  sectionHeaderLine: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  linkText: {
-    color: '#4F46E5',
-    fontWeight: '600',
+  bookBlockDesc: {
     fontSize: 12,
-  },
-  noteRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  noteIconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F3EEFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  noteInfo: {
-    flex: 1,
-  },
-  noteTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 2,
-  },
-  noteTime: {
-    fontSize: 11,
-    color: '#9CA3AF',
-  },
-  fabBtn: {
-    position: 'absolute',
-    bottom: 20, // Adjusted for persistent tab bar (inside layout)
-    right: 20,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#4F46E5', // prime blue
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    color: '#E0E7FF',
+    lineHeight: 18,
   },
 });

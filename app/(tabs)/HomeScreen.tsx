@@ -1,24 +1,25 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  SafeAreaView, 
-  ScrollView, 
-  TextInput, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
+  TextInput,
   TouchableOpacity,
   Dimensions,
-  Platform
+  Platform,
+  Image,
+  StatusBar,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-// import { BottomTabBar } from '../components/BottomTabBar'; <--- Removed
 import { useProfile } from '../../context/ProfileContext';
 import { useTheme } from '../../context/ThemeContext';
 
 const { width } = Dimensions.get('window');
+const STATUSBAR_HEIGHT = Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0;
 
-// --- DUMMY DATA ---
 const AI_TUTORS = [
   {
     id: '1',
@@ -39,7 +40,7 @@ const AI_TUTORS = [
     rate: '$35/jam',
     match: '92%',
     available: true,
-  }
+  },
 ];
 
 const POPULAR_SUBJECTS = [
@@ -58,7 +59,7 @@ const UPCOMING_SESSIONS = [
     title: 'Fisika Lanjut',
     time: '14:00 - 15:30',
     tutor: 'Dr. Sarah Jenkins',
-    borderColor: '#4F46E5', // Blueish
+    borderColor: '#4F46E5',
   },
   {
     id: '2',
@@ -66,52 +67,62 @@ const UPCOMING_SESSIONS = [
     title: 'Dasar Desain UI/UX',
     time: '17:00 - 18:00',
     tutor: 'Maria Garcia',
-    borderColor: '#9333EA', // Purpleish
-  }
+    borderColor: '#9333EA',
+  },
 ];
 
 export default function HomeScreen() {
   const router = useRouter();
   const { profileData } = useProfile();
   const { colors, isDark } = useTheme();
-  
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredTutors = AI_TUTORS.filter(tutor => 
-    tutor.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    tutor.subjects.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredTutors = AI_TUTORS.filter(
+    (tutor) =>
+      tutor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      tutor.subjects.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      
-      {/* Top Fixed Header */}
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
+
+      {/* ── HEADER ── */}
       <View style={[styles.header, { backgroundColor: colors.background }]}>
-        <View style={styles.headerLeft}>
-          <View style={[styles.avatarMini, { backgroundColor: colors.avatarBg }]}>
-            <Ionicons name="person" size={16} color="#FFF" />
-          </View>
-          <Text style={[styles.headerLogoText, { color: colors.primary }]}>EduPartner AI</Text>
+        {/* 
+          Kunci logo rapat kiri:
+          - Bungkus Image dalam TouchableOpacity/View kecil
+          - Jangan pakai width besar pada Image dengan resizeMode contain
+        */}
+        <View style={styles.logoContainer}>
+          <Image
+            source={require('../../assets/images/logo.jpeg')}
+            style={styles.logoImage}
+            resizeMode="cover"
+          />
         </View>
-        <TouchableOpacity style={styles.notificationBtn} onPress={() => router.push('/NotificationScreen' as any)}>
+
+        <TouchableOpacity
+          style={styles.notificationBtn}
+          onPress={() => router.push('/NotificationScreen' as any)}
+        >
           <Ionicons name="notifications" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
-      {/* Main Scrollable Content */}
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-        
-        {/* Greeting Section */}
+
+        {/* Greeting */}
         <View style={styles.greetingSection}>
-          <Text style={[styles.greetingText, { color: colors.text }]}>Hai, {profileData.name.split(' ')[0]}!</Text>
-          <Text style={styles.greetingSubtext}>
+          <Text style={[styles.greetingText, { color: colors.text }]}>
+            Hai, {profileData.name.split(' ')[0]}!
+          </Text>
+          <Text style={[styles.greetingSubtext, { color: colors.textSecondary }]}>
             Siap menguasai keahlian baru hari ini? Biarkan AI memandu perjalanan belajarmu.
           </Text>
-          
-          {/* Search Bar */}
           <View style={styles.searchBarContainer}>
             <Ionicons name="search" size={20} color="#9CA3AF" style={styles.searchIcon} />
-            <TextInput 
+            <TextInput
               style={styles.searchInput}
               placeholder="Cari mata kuliah atau tutor..."
               placeholderTextColor="#9CA3AF"
@@ -124,26 +135,20 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* AI Recommended Tutors */}
+        {/* Tutor Rekomendasi AI */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <View>
-              <Text style={styles.sectionTitle}>Tutor Rekomendasi AI</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Tutor Rekomendasi AI</Text>
               <Text style={styles.sectionSubtitle}>Dipilih berdasarkan riwayat belajarmu</Text>
             </View>
             <TouchableOpacity onPress={() => router.push('/TutorListScreen' as any)}>
               <Text style={styles.linkText}>Lihat Semua</Text>
             </TouchableOpacity>
           </View>
-
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalScrollContent}
-          >
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScrollContent}>
             {filteredTutors.map((tutor) => (
-              <View key={tutor.id} style={styles.tutorCard}>
-                
+              <View key={tutor.id} style={[styles.tutorCard, { backgroundColor: colors.card }]}>
                 <View style={styles.tutorCardHeader}>
                   <View style={styles.tutorAvatarContainer}>
                     <Ionicons name="person" size={24} color="#FFF" />
@@ -154,14 +159,12 @@ export default function HomeScreen() {
                     <Text style={styles.matchText}>COCOK {tutor.match}</Text>
                   </View>
                 </View>
-
-                <Text style={styles.tutorName}>{tutor.name}</Text>
+                <Text style={[styles.tutorName, { color: colors.text }]}>{tutor.name}</Text>
                 <Text style={styles.tutorSubjects}>{tutor.subjects}</Text>
-                
                 <View style={styles.tutorCardFooter}>
                   <View style={styles.ratingRow}>
                     <Ionicons name="star" size={14} color="#E11D48" />
-                    <Text style={styles.ratingText}>{tutor.rating}</Text>
+                    <Text style={[styles.ratingText, { color: colors.text }]}>{tutor.rating}</Text>
                     <Text style={styles.reviewsText}>({tutor.reviews} ulasan)</Text>
                   </View>
                   <Text style={styles.rateText}>{tutor.rate}</Text>
@@ -171,83 +174,73 @@ export default function HomeScreen() {
           </ScrollView>
         </View>
 
-        {/* Popular Subjects */}
+        {/* Mata Kuliah Populer */}
         <View style={styles.sectionContainer}>
           <View style={styles.popularSubjectsBox}>
-            <Text style={styles.sectionTitle}>Mata Kuliah Populer</Text>
-            
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Mata Kuliah Populer</Text>
             <View style={styles.subjectsGrid}>
-              {POPULAR_SUBJECTS.map((sub, index) => (
-                <TouchableOpacity 
-                  key={sub.id} 
-                  style={styles.subjectCard}
+              {POPULAR_SUBJECTS.map((sub) => (
+                <TouchableOpacity
+                  key={sub.id}
+                  style={[styles.subjectCard, { backgroundColor: colors.card }]}
                   onPress={() => router.push({ pathname: '/SubjectDetailScreen', params: { id: sub.id } } as any)}
                 >
                   <View style={[styles.subjectIconWrap, { backgroundColor: sub.color }]}>
                     <Ionicons name={sub.icon as any} size={24} color={sub.iconColor} />
                   </View>
-                  <Text style={styles.subjectName}>{sub.name}</Text>
+                  <Text style={[styles.subjectName, { color: colors.text }]}>{sub.name}</Text>
                 </TouchableOpacity>
               ))}
             </View>
           </View>
         </View>
 
-        {/* Upcoming Sessions */}
+        {/* Sesi Mendatang */}
         <View style={styles.sectionContainer}>
           <View style={[styles.sectionHeader, { marginBottom: 16 }]}>
-            <Text style={styles.sectionTitle}>Sesi Mendatang</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Sesi Mendatang</Text>
             <View style={styles.badgeLightPurple}>
               <Text style={styles.badgeLightPurpleText}>2 HARI INI</Text>
             </View>
           </View>
-
           {UPCOMING_SESSIONS.map((session) => (
-            <View key={session.id} style={[styles.sessionCard, { borderLeftColor: session.borderColor }]}>
+            <View key={session.id} style={[styles.sessionCard, { borderLeftColor: session.borderColor, backgroundColor: colors.card }]}>
               <View style={styles.sessionDateCircle}>
-                <Text style={styles.sessionDateText}>{session.dateText}</Text>
+                <Text style={[styles.sessionDateText, { color: colors.text }]}>{session.dateText}</Text>
               </View>
-              
               <View style={styles.sessionDetails}>
-                <Text style={styles.sessionTitle}>{session.title}</Text>
+                <Text style={[styles.sessionTitle, { color: colors.text }]}>{session.title}</Text>
                 <Text style={styles.sessionTimeInfo}>{session.time} • {session.tutor}</Text>
               </View>
-
               <TouchableOpacity style={styles.sessionGoBtn}>
                 <Ionicons name="arrow-forward" size={16} color="#4F46E5" />
               </TouchableOpacity>
             </View>
           ))}
-          
-          {/* Empty state bottom */}
           <View style={styles.emptySessionBox}>
             <Text style={styles.emptySessionText}>Tidak ada sesi lain yang dijadwalkan</Text>
           </View>
         </View>
 
-        {/* Learning Pulse Card */}
+        {/* Learning Pulse */}
         <View style={styles.pulseCard}>
           <View style={styles.pulseHeader}>
-             <Text style={styles.pulseTitle}>Denyut Belajar</Text>
-             <Ionicons name="analytics" size={24} color="#FFF" style={{opacity: 0.6}}/>
+            <Text style={styles.pulseTitle}>Denyut Belajar</Text>
+            <Ionicons name="analytics" size={24} color="#FFF" style={{ opacity: 0.6 }} />
           </View>
           <Text style={styles.pulseDesc}>Kamu telah menyelesaikan 85% target mingguanmu!</Text>
-          
           <View style={styles.progressBarRow}>
             <View style={styles.progressTrack}>
               <View style={[styles.progressFill, { width: '85%' }]} />
             </View>
             <Text style={styles.progressText}>12/14</Text>
           </View>
-
           <Text style={styles.pulseNextTarget}>
             Pencapaian Berikutnya: Selesaikan Modul Python Loops untuk mendapatkan lencana 'Code Ninja'.
           </Text>
         </View>
 
       </ScrollView>
-
-      {/* Manual BottomTabBar removed - handled by (tabs)/_layout.tsx */}
     </SafeAreaView>
   );
 }
@@ -255,34 +248,29 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FAFAFC', // very light gray-purple tint
+    backgroundColor: '#FAFAFC',
+    paddingTop: STATUSBAR_HEIGHT, // Android status bar
   },
+
+  // ── HEADER ──────────────────────────────────────────────────────
   header: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? 40 : 16,
-    paddingBottom: 16,
-    backgroundColor: '#FAFAFC',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E5E7EB',
   },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatarMini: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#1E293B',
+  // logoContainer membungkus Image agar ukurannya pas konten
+  logoContainer: {
+    alignItems: 'flex-start', // paksa konten ke kiri
     justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
   },
-  headerLogoText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#4F46E5',
+  logoImage: {
+    width: 44,   // pas ukuran logo circle
+    height: 44,
+    borderRadius: 8,
   },
   notificationBtn: {
     width: 40,
@@ -292,24 +280,25 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+
+  // ── SCROLL ──────────────────────────────────────────────────────
   scrollContent: {
-    paddingBottom: 110, // Adjusted for persistent tab bar
+    paddingBottom: 110,
   },
+
+  // ── GREETING ────────────────────────────────────────────────────
   greetingSection: {
     paddingHorizontal: 20,
-    paddingTop: 10,
+    paddingTop: 20,
     paddingBottom: 24,
-    // Note: The design has a soft gradient here which we simulate with background color
   },
   greetingText: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#111827',
     marginBottom: 8,
   },
   greetingSubtext: {
     fontSize: 14,
-    color: '#4B5563',
     lineHeight: 22,
     marginBottom: 20,
   },
@@ -342,6 +331,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 14,
   },
+
+  // ── SECTION ─────────────────────────────────────────────────────
   sectionContainer: {
     marginBottom: 32,
   },
@@ -355,7 +346,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111827',
     marginBottom: 2,
   },
   sectionSubtitle: {
@@ -367,6 +357,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
+
+  // ── TUTOR CARDS ─────────────────────────────────────────────────
   horizontalScrollContent: {
     paddingHorizontal: 20,
     gap: 16,
@@ -404,7 +396,7 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#10B981', // green
+    backgroundColor: '#10B981',
     borderWidth: 2,
     borderColor: '#FFF',
   },
@@ -425,7 +417,6 @@ const styles = StyleSheet.create({
   tutorName: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#111827',
     marginBottom: 4,
   },
   tutorSubjects: {
@@ -445,7 +436,6 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#111827',
     marginLeft: 4,
     marginRight: 4,
   },
@@ -458,8 +448,10 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#4F46E5',
   },
+
+  // ── POPULAR SUBJECTS ────────────────────────────────────────────
   popularSubjectsBox: {
-    backgroundColor: '#F3F4F6', // light gray rounded box
+    backgroundColor: '#F3F4F6',
     paddingVertical: 24,
     paddingHorizontal: 20,
     borderRadius: 40,
@@ -496,8 +488,9 @@ const styles = StyleSheet.create({
   subjectName: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#111827',
   },
+
+  // ── SESSIONS ────────────────────────────────────────────────────
   badgeLightPurple: {
     backgroundColor: '#EBE2FF',
     paddingHorizontal: 10,
@@ -538,7 +531,6 @@ const styles = StyleSheet.create({
   sessionDateText: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#111827',
     textAlign: 'center',
     lineHeight: 14,
   },
@@ -548,7 +540,6 @@ const styles = StyleSheet.create({
   sessionTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#111827',
     marginBottom: 4,
   },
   sessionTimeInfo: {
@@ -577,10 +568,12 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     fontSize: 13,
   },
+
+  // ── PULSE CARD ──────────────────────────────────────────────────
   pulseCard: {
     marginHorizontal: 20,
     marginBottom: 40,
-    backgroundColor: '#7C3AED', // Purple block (since gradients are trickier)
+    backgroundColor: '#7C3AED',
     borderRadius: 32,
     padding: 24,
   },

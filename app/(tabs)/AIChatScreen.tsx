@@ -1,81 +1,173 @@
 import React, { useState, useRef } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  SafeAreaView, 
-  ScrollView, 
-  TextInput, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
+  TextInput,
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Dimensions
+  Image,
+  StatusBar,
+  ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../context/ThemeContext';
-// import { BottomTabBar } from '../components/BottomTabBar'; <--- Removed
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-const { width } = Dimensions.get('window');
 
-const INITIAL_MESSAGES = [
-  {
-    id: '1',
-    sender: 'ai',
-    text: 'Halo! Saya Mitra Akademik AI Anda. Saya dapat membantu Anda menyelesaikan persamaan kompleks, menjelaskan peristiwa sejarah, atau bahkan membantu Anda menyusun esai berikutnya. Apa yang kita pelajari hari ini?',
-    options: [
-      'Jelaskan Fisika Kuantum',
-      'Bantuan Masalah Matematika'
-    ]
-  },
-  {
-    id: '2',
-    sender: 'user',
-    text: 'Bisakah Anda menjelaskan perbedaan antara Mitosis dan Meiosis dalam istilah sederhana? Saya ada tes biologi besok.'
-  },
-  {
-    id: '3',
-    sender: 'ai',
-    isRich: true, // specific flag to render the rich content block
-  }
+const GEMINI_API_KEY ='AIzaSyDhE-BjTJPLSt9ZY0iV1e7uBgnCcT-x3I8';
+
+const GEMINI_URL =
+  `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+const SYSTEM_PROMPT =
+  `Kamu adalah Mitra Akademik AI yang membantu siswa belajar. ` +
+  `Jawab dalam Bahasa Indonesia dengan jelas, ramah, dan edukatif. ` +
+  `Gunakan penjelasan sederhana dan contoh nyata. ` +
+  `Jika ada rumus atau poin penting, gunakan format yang mudah dibaca. ` +
+  `Batasi jawaban agar tidak terlalu panjang kecuali diminta.`;
+
+const SB_HEIGHT =
+  Platform.OS === 'android' ? (StatusBar.currentHeight || 0) : 0;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TYPES
+// ─────────────────────────────────────────────────────────────────────────────
+type Role = 'user' | 'ai';
+
+interface Message {
+  id: string;
+  role: Role;
+  text: string;
+  options?: string[];
+  isLoading?: boolean;
+}
+
+interface GeminiContent {
+  role: 'user' | 'model';
+  parts: { text: string }[];
+}
+
+const CHIPS = [
+  'Jelaskan Fisika Kuantum',
+  'Bantuan Masalah Matematika',
+  'Apa itu DNA?',
+  'Cara belajar efektif',
 ];
 
+// ─────────────────────────────────────────────────────────────────────────────
+// KOMPONEN UTAMA
+// ─────────────────────────────────────────────────────────────────────────────
 export default function AIChatScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const [messages, setMessages] = useState(INITIAL_MESSAGES);
+  const insets = useSafeAreaInsets();
+  const scrollRef = useRef<ScrollView>(null);
+
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: '1',
+      role: 'ai',
+      text:
+        'Halo! Saya Mitra Akademik AI Anda. Saya dapat membantu Anda menyelesaikan persamaan kompleks, menjelaskan peristiwa sejarah, atau bahkan membantu Anda menyusun esai berikutnya. Apa yang kita pelajari hari ini?',
+      options: CHIPS,
+    },
+  ]);
   const [inputText, setInputText] = useState('');
-  const scrollViewRef = useRef<ScrollView>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const historyRef = useRef<GeminiContent[]>([]);
 
-  const handleSend = () => {
-    if (inputText.trim().length === 0) return;
-    
-    // Add user message
-    const newMessage = {
-      id: Date.now().toString(),
-      sender: 'user',
-      text: inputText.trim()
-    };
-    
-    setMessages(prev => [...prev, newMessage]);
-    setInputText('');
+  // ── Kirim ke Gemini ────────────────────────────────────────────────────────
+  const callGemini = async (userText: string): Promise<string> => {
+    historyRef.current.push({ role: 'user', parts: [{ text: userText }] });
 
-    // Simulate AI typing / response delay
-    setTimeout(() => {
-      setMessages(prev => [...prev, {
-        id: (Date.now() + 1).toString(),
-        sender: 'ai',
-        text: 'Ini adalah contoh respons simulasi dari AI Assistant. Fitur ini akan segera diintegrasikan dengan database Convex!'
-      }]);
-    }, 1500);
+    const res = await fetch(GEMINI_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+        contents: historyRef.current,
+      }),
+    });
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message || 'Gemini API error');
+
+    const reply: string =
+      data.candidates?.[0]?.content?.parts?.[0]?.text ?? 'Maaf, tidak ada respons.';
+
+    historyRef.current.push({ role: 'model', parts: [{ text: reply }] });
+    return reply;
   };
 
-  const renderBubble = (msg: any) => {
-    const isUser = msg.sender === 'user';
+  // ── Handle Send ────────────────────────────────────────────────────────────
+  const handleSend = async (override?: string) => {
+    const text = (override ?? inputText).trim();
+    if (!text || isLoading) return;
 
+    if (GEMINI_API_KEY ==='AIzaSyDhE-BjTJPLSt9ZY0iV1e7uBgnCcT-x3I8') {
+      Alert.alert(
+        'API Key Belum Diisi',
+        'Buka file AIChatScreen.tsx, cari baris GEMINI_API_KEY dan ganti dengan API key dari https://aistudio.google.com',
+      );
+      return;
+    }
+
+    setInputText('');
+    setIsLoading(true);
+
+    const userId = Date.now().toString();
+    const loadId = (Date.now() + 1).toString();
+
+    setMessages(prev => [
+      ...prev,
+      { id: userId, role: 'user', text },
+      { id: loadId, role: 'ai', text: '', isLoading: true },
+    ]);
+
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
+
+    try {
+      const reply = await callGemini(text);
+      setMessages(prev =>
+        prev.map(m =>
+          m.id === loadId ? { ...m, text: reply, isLoading: false } : m,
+        ),
+      );
+    } catch (err: any) {
+      setMessages(prev =>
+        prev.map(m =>
+          m.id === loadId
+            ? {
+                ...m,
+                text: `Terjadi kesalahan: ${err.message ?? 'Periksa API key dan koneksi internet.'}`,
+                isLoading: false,
+              }
+            : m,
+        ),
+      );
+    } finally {
+      setIsLoading(false);
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
+    }
+  };
+
+  // ── Render Bubble ──────────────────────────────────────────────────────────
+  const renderBubble = (msg: Message) => {
+    const isUser = msg.role === 'user';
     return (
-      <View key={msg.id} style={[styles.messageRow, isUser ? styles.messageRowUser : styles.messageRowAI]}>
-        
+      <View
+        key={msg.id}
+        style={[
+          styles.messageRow,
+          isUser ? styles.messageRowUser : styles.messageRowAI,
+        ]}
+      >
         {!isUser && (
           <View style={[styles.aiAvatar, { backgroundColor: colors.primary }]}>
             <Ionicons name="hardware-chip" size={16} color="#FFF" />
@@ -83,86 +175,52 @@ export default function AIChatScreen() {
         )}
 
         <View style={isUser ? styles.bubbleUserWrapper : styles.bubbleAIWrapper}>
-          <View style={[styles.bubble, isUser ? [styles.bubbleUser, { backgroundColor: colors.primary }] : [styles.bubbleAI, { backgroundColor: colors.card, borderColor: colors.border }]]}>
-            
-            {/* Standard Text Message */}
-            {msg.text && (
-              <Text style={[styles.messageText, isUser ? styles.messageTextUser : [styles.messageTextAI, { color: colors.text }]]}>
+          <View
+            style={[
+              styles.bubble,
+              isUser
+                ? [styles.bubbleUser, { backgroundColor: colors.primary }]
+                : [styles.bubbleAI, { backgroundColor: colors.card, borderColor: colors.border }],
+            ]}
+          >
+            {msg.isLoading ? (
+              <View style={styles.typingRow}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={[styles.typingText, { color: colors.textSecondary }]}>
+                  Sedang mengetik...
+                </Text>
+              </View>
+            ) : (
+              <Text
+                style={[
+                  styles.messageText,
+                  isUser
+                    ? styles.messageTextUser
+                    : [styles.messageTextAI, { color: colors.text }],
+                ]}
+              >
                 {msg.text}
               </Text>
             )}
 
-            {/* AI Options Chips */}
-            {msg.options && (
+            {msg.options && !msg.isLoading && (
               <View style={styles.optionsContainer}>
-                {msg.options.map((opt: string, idx: number) => (
-                  <TouchableOpacity key={idx} style={[styles.optionChip, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                    <Text style={[styles.optionChipText, { color: colors.primary }]}>{opt}</Text>
+                {msg.options.map((opt, idx) => (
+                  <TouchableOpacity
+                    key={idx}
+                    style={[
+                      styles.optionChip,
+                      { backgroundColor: colors.background, borderColor: colors.border },
+                    ]}
+                    onPress={() => handleSend(opt)}
+                  >
+                    <Text style={[styles.optionChipText, { color: colors.primary }]}>
+                      {opt}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
             )}
-
-            {/* Custom Rich Content Message (Cell Division Example) */}
-            {msg.isRich && (
-              <View style={styles.richContent}>
-                 <Text style={[styles.richTitle, { color: colors.text }]}>Penjelasan{'\n'}Pembelahan Sel</Text>
-                 
-                 <View style={styles.richList}>
-                    <View style={styles.richListItem}>
-                      <View style={[styles.richListBorder, { backgroundColor: colors.primary }]} />
-                      <View style={styles.richListContent}>
-                        <Text style={[styles.richListTitle, { color: colors.text }]}>1. Mitosis: Mesin Fotokopi</Text>
-                        <Text style={[styles.richListText, { color: colors.textSecondary }]}>Anggap ini seperti membuat fotokopi yang tepat. Satu sel membelah sekali untuk membentuk dua sel "anak" yang identik. Ini adalah cara tubuh Anda tumbuh atau menyembuhkan luka.</Text>
-                      </View>
-                    </View>
-                    
-                    <View style={styles.richListItem}>
-                      <View style={[styles.richListBorder, { backgroundColor: colors.primary }]} />
-                      <View style={styles.richListContent}>
-                        <Text style={[styles.richListTitle, { color: colors.text }]}>2. Meiosis: Pengocok</Text>
-                        <Text style={[styles.richListText, { color: colors.textSecondary }]}>Ini lebih seperti mengocok setumpuk kartu. Satu sel membelah dua kali untuk membentuk empat sel unik dengan setengah DNA asli. Ini hanya terjadi untuk reproduksi.</Text>
-                      </View>
-                    </View>
-                 </View>
-
-                 {/* Rich Cards */}
-                 <View style={styles.richCardsRow}>
-                    <View style={[styles.richCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                       <View style={styles.richCardIconBoxBlue}>
-                          <Ionicons name="copy" size={18} color={colors.primary} />
-                       </View>
-                       <Text style={[styles.richCardSubtitle, { color: colors.textSecondary }]}>MITOSIS</Text>
-                       <Text style={[styles.richCardTitle, { color: colors.text }]}>Sel Somatik (Tubuh)</Text>
-                    </View>
-                 </View>
-
-                 <View style={styles.richCardsRow}>
-                    <View style={[styles.richCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                       <View style={styles.richCardIconBoxPurple}>
-                          <Ionicons name="people" size={18} color="#9333EA" />
-                       </View>
-                       <Text style={[styles.richCardSubtitle, { color: colors.textSecondary }]}>MEIOSIS</Text>
-                       <Text style={[styles.richCardTitle, { color: colors.text }]}>Gamet (Sel Kelamin)</Text>
-                    </View>
-                 </View>
-
-                 {/* Source Footer */}
-                 <View style={[styles.richFooter, { borderTopColor: colors.border }]}>
-                    <Text style={[styles.richSourceText, { color: colors.textSecondary }]}>Sumber:{'\n'}Campbell Biology, Khan Academy</Text>
-                    <View style={styles.richFeedback}>
-                       <TouchableOpacity style={styles.feedbackBtn}>
-                         <Ionicons name="thumbs-up" size={16} color={colors.textSecondary} />
-                       </TouchableOpacity>
-                       <TouchableOpacity style={styles.feedbackBtn}>
-                         <Ionicons name="thumbs-down" size={16} color={colors.textSecondary} />
-                       </TouchableOpacity>
-                    </View>
-                 </View>
-
-              </View>
-            )}
-
           </View>
         </View>
 
@@ -171,32 +229,67 @@ export default function AIChatScreen() {
             <Ionicons name="person" size={16} color="#FFF" />
           </View>
         )}
-
       </View>
     );
   };
 
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      <KeyboardAvoidingView 
-        style={styles.container} 
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        {/* Header */}
-        <View style={[styles.header, { backgroundColor: colors.background }]}>
-          <View style={styles.headerLeft}>
-            <View style={[styles.headerIconWrapper, { backgroundColor: colors.primary }]}>
-               <Ionicons name="hardware-chip" size={18} color="#FFF" />
-            </View>
-            <Text style={[styles.headerLogoText, { color: colors.text }]}>EduPartner AI</Text>
-          </View>
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
 
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        {/* ── HEADER — tidak diubah dari kode asli ── */}
+        <View
+          style={[
+            styles.header,
+            {
+              backgroundColor: colors.background,
+              paddingTop: SB_HEIGHT + 12,
+              borderBottomColor: colors.border,
+            },
+          ]}
+        >
+          <Image
+            source={require('../../assets/images/logo.jpeg')}
+            style={styles.logoImage}
+          />
           <View style={styles.headerRight}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.notificationBtn}
               onPress={() => router.push('/NotificationScreen' as any)}
             >
               <Ionicons name="notifications" size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() =>
+                Alert.alert('Reset Chat', 'Hapus semua riwayat percakapan?', [
+                  { text: 'Batal', style: 'cancel' },
+                  {
+                    text: 'Reset',
+                    style: 'destructive',
+                    onPress: () => {
+                      historyRef.current = [];
+                      setMessages([
+                        {
+                          id: Date.now().toString(),
+                          role: 'ai',
+                          text: 'Percakapan direset. Ada yang ingin kamu tanyakan?',
+                          options: CHIPS,
+                        },
+                      ]);
+                    },
+                  },
+                ])
+              }
+            >
+              <Ionicons name="refresh-outline" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
             <View style={[styles.avatarMini, { backgroundColor: colors.avatarBg }]}>
               <Ionicons name="person" size={16} color="#FFF" />
@@ -204,23 +297,46 @@ export default function AIChatScreen() {
           </View>
         </View>
 
-        {/* Chat List */}
-        <ScrollView 
-          ref={scrollViewRef}
-          onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
-          contentContainerStyle={styles.scrollContent}
+        {/* ── CHAT LIST ── */}
+        <ScrollView
+          ref={scrollRef}
+          onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: true })}
+          contentContainerStyle={[
+            styles.scrollContent,
+            // Padding bawah agar konten terakhir tidak tertutup input bar
+            { paddingBottom: 20 },
+          ]}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
           {messages.map(renderBubble)}
         </ScrollView>
 
-        {/* Input Field Section */}
-        <View style={[styles.inputAreaWrapper, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
-          <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+        {/* ── INPUT BAR ──
+            Tidak lagi menggunakan position: absolute.
+            Menggunakan layout normal + paddingBottom dari insets.bottom
+            agar tidak tertutup navigation bar / home indicator Android & iOS.
+        ── */}
+        <View
+          style={[
+            styles.inputAreaWrapper,
+            {
+              backgroundColor: colors.background,
+              borderTopColor: colors.border,
+              // Tambahkan jarak bawah sesuai tinggi navigation bar perangkat
+              paddingBottom: insets.bottom > 0 ? insets.bottom : 12,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.inputContainer,
+              { backgroundColor: colors.card, borderColor: colors.border },
+            ]}
+          >
             <TouchableOpacity style={styles.attachBtn}>
               <Ionicons name="attach" size={24} color={colors.textSecondary} />
             </TouchableOpacity>
-            
             <TextInput
               style={[styles.textInput, { color: colors.text }]}
               placeholder="Ajukan pertanyaan..."
@@ -228,66 +344,66 @@ export default function AIChatScreen() {
               value={inputText}
               onChangeText={setInputText}
               multiline
+              maxLength={2000}
+              editable={!isLoading}
+              blurOnSubmit={false}
             />
-
-            <TouchableOpacity 
-              style={[styles.sendBtn, inputText.trim().length > 0 ? { backgroundColor: colors.primary } : { backgroundColor: colors.border }]} 
-              onPress={handleSend}
+            <TouchableOpacity
+              style={[
+                styles.sendBtn,
+                {
+                  backgroundColor:
+                    inputText.trim().length > 0 && !isLoading
+                      ? colors.primary
+                      : colors.border,
+                },
+              ]}
+              onPress={() => handleSend()}
+              disabled={isLoading || inputText.trim().length === 0}
             >
-              <Ionicons name="send" size={16} color="#FFF" />
+              {isLoading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Ionicons name="send" size={16} color="#FFF" />
+              )}
             </TouchableOpacity>
           </View>
+          <Text style={[styles.disclaimer, { color: colors.textSecondary }]}>
+            Jawaban AI bisa saja tidak akurat. Verifikasi informasi penting.
+          </Text>
         </View>
-
       </KeyboardAvoidingView>
-      {/* Manual BottomTabBar removed */}
     </SafeAreaView>
   );
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// STYLES
+// ─────────────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#FAFAFC', // light grey bg
-  },
-  container: {
-    flex: 1,
-  },
+  safeArea: { flex: 1 },
+  container: { flex: 1 },
+
+  // Header — identik dengan kode asli
   header: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? 40 : 16,
-    paddingBottom: 20,
-    backgroundColor: '#FAFAFC',
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerIconWrapper: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#4F46E5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  headerLogoText: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#4F46E5', // purple main brand
+  logoImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 8,
   },
   headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
   },
-  notificationBtn: {
-    padding: 2,
-  },
+  notificationBtn: { padding: 2 },
   avatarMini: {
     width: 32,
     height: 32,
@@ -296,28 +412,26 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+
+  // Scroll
   scrollContent: {
     paddingHorizontal: 16,
-    paddingBottom: 120, // increased for floating input + tab bar
     paddingTop: 10,
   },
+
+  // Messages
   messageRow: {
     flexDirection: 'row',
     marginBottom: 24,
     alignItems: 'flex-start',
     width: '100%',
   },
-  messageRowAI: {
-    justifyContent: 'flex-start',
-  },
-  messageRowUser: {
-    justifyContent: 'flex-end',
-  },
+  messageRowAI: { justifyContent: 'flex-start' },
+  messageRowUser: { justifyContent: 'flex-end' },
   aiAvatar: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#6366F1', // indigo AI
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -326,211 +440,85 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#A855F7', // user purple
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 12,
   },
-  bubbleAIWrapper: {
-    flex: 1,
-    maxWidth: '85%',
-    alignItems: 'flex-start',
-  },
-  bubbleUserWrapper: {
-    flex: 1,
-    maxWidth: '80%',
-    alignItems: 'flex-end',
-  },
+  bubbleAIWrapper: { flex: 1, maxWidth: '85%', alignItems: 'flex-start' },
+  bubbleUserWrapper: { flex: 1, maxWidth: '80%', alignItems: 'flex-end' },
   bubble: {
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderRadius: 24,
   },
   bubbleAI: {
-    backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
     shadowRadius: 8,
     elevation: 1,
   },
-  bubbleUser: {
-    backgroundColor: '#4F46E5', // user primary
-    borderTopRightRadius: 8,
-  },
-  messageText: {
-    fontSize: 14,
-    lineHeight: 22,
-  },
-  messageTextAI: {
-    color: '#374151',
-  },
-  messageTextUser: {
-    color: '#FFFFFF',
-  },
-  optionsContainer: {
-    marginTop: 16,
-    gap: 10,
-  },
+  bubbleUser: { borderTopRightRadius: 8 },
+  messageText: { fontSize: 14, lineHeight: 22 },
+  messageTextAI: { color: '#374151' },
+  messageTextUser: { color: '#FFFFFF' },
+
+  // Typing indicator
+  typingRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  typingText: { fontSize: 13 },
+
+  // Quick chips
+  optionsContainer: { marginTop: 16, gap: 10 },
   optionChip: {
-    backgroundColor: '#F3F4F6',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 20,
+    borderWidth: StyleSheet.hairlineWidth,
   },
-  optionChipText: {
-    color: '#4F46E5',
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  // Rich Content specific classes
-  richContent: {
-    width: '100%',
-  },
-  richTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#4F46E5',
-    marginBottom: 20,
-    lineHeight: 22,
-  },
-  richList: {
-    marginBottom: 24,
-  },
-  richListItem: {
-    flexDirection: 'row',
-    marginBottom: 20,
-  },
-  richListBorder: {
-    width: 2,
-    backgroundColor: '#E5E7EB', // light grey border
-    marginRight: 16,
-    borderRadius: 1,
-  },
-  richListContent: {
-    flex: 1,
-  },
-  richListTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 6,
-  },
-  richListText: {
-    fontSize: 13,
-    color: '#4B5563',
-    lineHeight: 20,
-  },
-  richCardsRow: {
-    marginBottom: 12,
-    alignItems: 'center',
-  },
-  richCard: {
-    width: '100%',
-    backgroundColor: '#FAFAFC', // very light grey for the inner card box
-    borderRadius: 20,
-    padding: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
-  },
-  richCardIconBoxBlue: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#E0E7FF', // lighter blue
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  richCardIconBoxPurple: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#F3E8FF', // ligher purple
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  richCardSubtitle: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#6B7280',
-    letterSpacing: 1,
-    marginBottom: 4,
-  },
-  richCardTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  richFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-  },
-  richSourceText: {
-    fontSize: 10,
-    color: '#9CA3AF',
-    lineHeight: 14,
-    flex: 1,
-    marginRight: 10,
-  },
-  richFeedback: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  feedbackBtn: {
-    padding: 4,
-  },
-  // Floating Input Field
+  optionChipText: { fontSize: 12, fontWeight: '600', textAlign: 'center' },
+
+  // Input bar — layout normal, bukan absolute
   inputAreaWrapper: {
-    position: 'absolute',
-    bottom: 10, // Adjusted for persistent tab bar (since it's inside the layout now)
-    left: 16,
-    right: 16,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 16,
+    paddingTop: 10,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
     borderRadius: 32,
     paddingHorizontal: 8,
     paddingVertical: 8,
+    borderWidth: StyleSheet.hairlineWidth,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 10,
     elevation: 3,
   },
-  attachBtn: {
-    padding: 12,
-  },
+  attachBtn: { padding: 12 },
   textInput: {
     flex: 1,
     minHeight: 40,
     maxHeight: 100,
     fontSize: 14,
-    color: '#111827',
     paddingHorizontal: 8,
-    paddingTop: 10, // vertical alignment for multiline
+    paddingTop: 10,
   },
   sendBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#D1D5DB', // inactive grey
     justifyContent: 'center',
     alignItems: 'center',
     marginLeft: 8,
   },
-  sendBtnActive: {
-    backgroundColor: '#4F46E5', // active blue/purple
+  disclaimer: {
+    fontSize: 10,
+    textAlign: 'center',
+    marginTop: 6,
+    marginBottom: 4,
   },
 });
