@@ -8,67 +8,17 @@ import {
   TextInput, 
   TouchableOpacity,
   Dimensions,
-  Platform
+  Platform,
+  ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-// import { BottomTabBar } from '../components/BottomTabBar'; <--- Removed
 import { useProfile } from '../../context/ProfileContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 
 const { width } = Dimensions.get('window');
-
-// --- DUMMY DATA ---
-const AI_TUTORS = [
-  {
-    id: '1',
-    name: 'Dr. Sarah Jenkins',
-    subjects: 'Kalkulus Lanjut & Fisika',
-    rating: 4.9,
-    reviews: 124,
-    rate: '$45/jam',
-    match: '98%',
-    available: true,
-  },
-  {
-    id: '2',
-    name: 'James Wilson',
-    subjects: 'Python & Data Science',
-    rating: 4.8,
-    reviews: 89,
-    rate: '$35/jam',
-    match: '92%',
-    available: true,
-  }
-];
-
-const POPULAR_SUBJECTS = [
-  { id: '1', name: 'Matematika', icon: 'calculator-outline', color: '#EBE2FF', iconColor: '#7C3AED' },
-  { id: '2', name: 'Koding', icon: 'code-slash-outline', color: '#FCE7F3', iconColor: '#DB2777' },
-  { id: '3', name: 'Bahasa', icon: 'globe-outline', color: '#FCE7F3', iconColor: '#E11D48' },
-  { id: '4', name: 'Biologi', icon: 'flask-outline', color: '#EBE2FF', iconColor: '#4F46E5' },
-  { id: '5', name: 'Desain', icon: 'color-palette-outline', color: '#F3E8FF', iconColor: '#9333EA' },
-  { id: '6', name: 'Sejarah', icon: 'time-outline', color: '#FEE2E2', iconColor: '#E11D48' },
-];
-
-const UPCOMING_SESSIONS = [
-  {
-    id: '1',
-    dateText: 'OKT\n24',
-    title: 'Fisika Lanjut',
-    time: '14:00 - 15:30',
-    tutor: 'Dr. Sarah Jenkins',
-    borderColor: '#4F46E5', // Blueish
-  },
-  {
-    id: '2',
-    dateText: 'OKT\n24',
-    title: 'Dasar Desain UI/UX',
-    time: '17:00 - 18:00',
-    tutor: 'Maria Garcia',
-    borderColor: '#9333EA', // Purpleish
-  }
-];
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -77,9 +27,19 @@ export default function HomeScreen() {
   
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredTutors = AI_TUTORS.filter(tutor => 
-    tutor.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    tutor.subjects.toLowerCase().includes(searchQuery.toLowerCase())
+  // Convex Integration
+  const currentUser = useQuery(api.users.getUserByEmail, { email: profileData.email });
+  const tutors = useQuery(api.tutors.getTutors);
+  const popularSubjects = useQuery(api.subjects.getPopularSubjects);
+  
+  // Hanya jalankan query sessions jika currentUser ditemukan
+  const sessions = useQuery(api.sessions.getSessionsByUser, 
+    currentUser ? { userId: currentUser._id, role: currentUser.role } : "skip"
+  );
+
+  const filteredTutors = tutors?.filter(tutor => 
+    tutor.user?.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    tutor.subjects.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (
@@ -136,39 +96,51 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
 
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalScrollContent}
-          >
-            {filteredTutors.map((tutor) => (
-              <View key={tutor.id} style={styles.tutorCard}>
-                
-                <View style={styles.tutorCardHeader}>
-                  <View style={styles.tutorAvatarContainer}>
-                    <Ionicons name="person" size={24} color="#FFF" />
-                    {tutor.available && <View style={styles.onlineDot} />}
-                  </View>
-                  <View style={styles.matchBadge}>
-                    <Ionicons name="sparkles" size={12} color="#7C3AED" />
-                    <Text style={styles.matchText}>COCOK {tutor.match}</Text>
-                  </View>
-                </View>
+          {tutors === undefined ? (
+            <ActivityIndicator size="small" color={colors.primary} />
+          ) : (
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.horizontalScrollContent}
+            >
+              {(filteredTutors && filteredTutors.length > 0) ? (
+                filteredTutors.map((tutor) => (
+                  <TouchableOpacity 
+                    key={tutor._id} 
+                    style={styles.tutorCard}
+                    onPress={() => router.push({ pathname: '/TutorProfileScreen', params: { id: tutor._id } } as any)}
+                  >
+                    <View style={styles.tutorCardHeader}>
+                      <View style={styles.tutorAvatarContainer}>
+                        <Ionicons name="person" size={24} color="#FFF" />
+                        <View style={styles.onlineDot} />
+                      </View>
+                      <View style={styles.matchBadge}>
+                        <Ionicons name="sparkles" size={12} color="#7C3AED" />
+                        <Text style={styles.matchText}>COCOK 98%</Text>
+                      </View>
+                    </View>
 
-                <Text style={styles.tutorName}>{tutor.name}</Text>
-                <Text style={styles.tutorSubjects}>{tutor.subjects}</Text>
-                
-                <View style={styles.tutorCardFooter}>
-                  <View style={styles.ratingRow}>
-                    <Ionicons name="star" size={14} color="#E11D48" />
-                    <Text style={styles.ratingText}>{tutor.rating}</Text>
-                    <Text style={styles.reviewsText}>({tutor.reviews} ulasan)</Text>
-                  </View>
-                  <Text style={styles.rateText}>{tutor.rate}</Text>
-                </View>
-              </View>
-            ))}
-          </ScrollView>
+                    <Text style={styles.tutorName}>{tutor.user?.name || tutor.name}</Text>
+                    <Text style={styles.tutorSubjects}>
+                      {tutor.subjects ? tutor.subjects.join(' & ') : tutor.specialization}
+                    </Text>                    
+                    <View style={styles.tutorCardFooter}>
+                      <View style={styles.ratingRow}>
+                        <Ionicons name="star" size={14} color="#E11D48" />
+                        <Text style={styles.ratingText}>{tutor.rating.toFixed(1)}</Text>
+                        <Text style={styles.reviewsText}>(48 ulasan)</Text>
+                      </View>
+                      <Text style={styles.rateText}>$45/jam</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <Text style={styles.emptySessionText}>Belum ada tutor tersedia.</Text>
+              )}
+            </ScrollView>
+          )}
         </View>
 
         {/* Popular Subjects */}
@@ -176,20 +148,24 @@ export default function HomeScreen() {
           <View style={styles.popularSubjectsBox}>
             <Text style={styles.sectionTitle}>Mata Kuliah Populer</Text>
             
-            <View style={styles.subjectsGrid}>
-              {POPULAR_SUBJECTS.map((sub, index) => (
-                <TouchableOpacity 
-                  key={sub.id} 
-                  style={styles.subjectCard}
-                  onPress={() => router.push({ pathname: '/SubjectDetailScreen', params: { id: sub.id } } as any)}
-                >
-                  <View style={[styles.subjectIconWrap, { backgroundColor: sub.color }]}>
-                    <Ionicons name={sub.icon as any} size={24} color={sub.iconColor} />
-                  </View>
-                  <Text style={styles.subjectName}>{sub.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+            {popularSubjects === undefined ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <View style={styles.subjectsGrid}>
+                {popularSubjects.map((sub) => (
+                  <TouchableOpacity 
+                    key={sub._id} 
+                    style={styles.subjectCard}
+                    onPress={() => router.push({ pathname: '/SubjectDetailScreen', params: { id: sub._id } } as any)}
+                  >
+                    <View style={[styles.subjectIconWrap, { backgroundColor: '#EBE2FF' }]}>
+                      <Ionicons name="book-outline" size={24} color="#7C3AED" />
+                    </View>
+                    <Text style={styles.subjectName}>{sub.name || sub.title}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
         </View>
 
@@ -198,31 +174,36 @@ export default function HomeScreen() {
           <View style={[styles.sectionHeader, { marginBottom: 16 }]}>
             <Text style={styles.sectionTitle}>Sesi Mendatang</Text>
             <View style={styles.badgeLightPurple}>
-              <Text style={styles.badgeLightPurpleText}>2 HARI INI</Text>
+              <Text style={styles.badgeLightPurpleText}>{sessions?.length || 0} TOTAL</Text>
             </View>
           </View>
 
-          {UPCOMING_SESSIONS.map((session) => (
-            <View key={session.id} style={[styles.sessionCard, { borderLeftColor: session.borderColor }]}>
-              <View style={styles.sessionDateCircle}>
-                <Text style={styles.sessionDateText}>{session.dateText}</Text>
-              </View>
-              
-              <View style={styles.sessionDetails}>
-                <Text style={styles.sessionTitle}>{session.title}</Text>
-                <Text style={styles.sessionTimeInfo}>{session.time} • {session.tutor}</Text>
-              </View>
+          {/* Jika currentUser null (belum login/terdaftar), sessions akan 'skip' dan bernilai undefined. 
+              Kita tampilkan state kosong daripada spinner terus-menerus. */}
+          {sessions && sessions.length > 0 ? (
+            sessions.slice(0, 2).map((session) => (
+              <View key={session._id} style={[styles.sessionCard, { borderLeftColor: '#4F46E5' }]}>
+                <View style={styles.sessionDateCircle}>
+                  <Text style={styles.sessionDateText}>{session.date.split(' ')[0]}</Text>
+                </View>
+                
+                <View style={styles.sessionDetails}>
+                  <Text style={styles.sessionTitle}>{session.subject}</Text>
+                  <Text style={styles.sessionTimeInfo}>{session.time} • {session.tutor?.name}</Text>
+                </View>
 
-              <TouchableOpacity style={styles.sessionGoBtn}>
-                <Ionicons name="arrow-forward" size={16} color="#4F46E5" />
-              </TouchableOpacity>
+                <TouchableOpacity style={styles.sessionGoBtn} onPress={() => router.push('/ProgressScreen' as any)}>
+                  <Ionicons name="arrow-forward" size={16} color="#4F46E5" />
+                </TouchableOpacity>
+              </View>
+            ))
+          ) : (
+            <View style={styles.emptySessionBox}>
+              <Text style={styles.emptySessionText}>
+                {currentUser === null ? "Daftarkan akun untuk melihat sesi." : "Tidak ada sesi lain yang dijadwalkan"}
+              </Text>
             </View>
-          ))}
-          
-          {/* Empty state bottom */}
-          <View style={styles.emptySessionBox}>
-            <Text style={styles.emptySessionText}>Tidak ada sesi lain yang dijadwalkan</Text>
-          </View>
+          )}
         </View>
 
         {/* Learning Pulse Card */}
@@ -246,8 +227,6 @@ export default function HomeScreen() {
         </View>
 
       </ScrollView>
-
-      {/* Manual BottomTabBar removed - handled by (tabs)/_layout.tsx */}
     </SafeAreaView>
   );
 }
@@ -255,7 +234,6 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FAFAFC', // very light gray-purple tint
   },
   header: {
     flexDirection: 'row',
@@ -263,8 +241,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: Platform.OS === 'android' ? 40 : 16,
-    paddingBottom: 16,
-    backgroundColor: '#FAFAFC',
+    paddingBottom: 20,
   },
   headerLeft: {
     flexDirection: 'row',
@@ -274,73 +251,61 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#1E293B',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 10,
   },
   headerLogoText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#4F46E5',
+    fontSize: 18,
+    fontWeight: '800',
   },
   notificationBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 2,
   },
   scrollContent: {
-    paddingBottom: 110, // Adjusted for persistent tab bar
+    paddingBottom: 30,
   },
   greetingSection: {
     paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 24,
-    // Note: The design has a soft gradient here which we simulate with background color
+    marginBottom: 30,
   },
   greetingText: {
     fontSize: 28,
-    fontWeight: '800',
-    color: '#111827',
+    fontWeight: '900',
     marginBottom: 8,
   },
   greetingSubtext: {
     fontSize: 14,
-    color: '#4B5563',
+    color: '#6B7280',
     lineHeight: 22,
-    marginBottom: 20,
+    marginBottom: 24,
   },
   searchBarContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F3F4F6',
-    borderRadius: 30,
-    paddingLeft: 16,
-    paddingVertical: 6,
-    paddingRight: 6,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   searchIcon: {
-    marginRight: 8,
+    marginRight: 10,
   },
   searchInput: {
     flex: 1,
     fontSize: 14,
     color: '#111827',
-    height: 40,
   },
   searchButton: {
     backgroundColor: '#4F46E5',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
   },
   searchButtonText: {
     color: '#FFFFFF',
-    fontWeight: '600',
-    fontSize: 14,
+    fontSize: 12,
+    fontWeight: '700',
   },
   sectionContainer: {
     marginBottom: 32,
@@ -348,39 +313,40 @@ const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     paddingHorizontal: 20,
-    marginBottom: 16,
+    marginBottom: 20,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 20,
+    fontWeight: '800',
     color: '#111827',
-    marginBottom: 2,
   },
   sectionSubtitle: {
     fontSize: 12,
     color: '#6B7280',
+    marginTop: 4,
   },
   linkText: {
     color: '#4F46E5',
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   horizontalScrollContent: {
-    paddingHorizontal: 20,
-    gap: 16,
+    paddingLeft: 20,
+    paddingRight: 10,
   },
   tutorCard: {
-    width: width * 0.75,
     backgroundColor: '#FFFFFF',
-    borderRadius: 24,
+    width: width * 0.7,
+    borderRadius: 28,
     padding: 20,
+    marginRight: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.03,
     shadowRadius: 10,
-    elevation: 3,
+    elevation: 2,
   },
   tutorCardHeader: {
     flexDirection: 'row',
@@ -389,47 +355,47 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   tutorAvatarContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 16,
     backgroundColor: '#1E293B',
-    position: 'relative',
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
   },
   onlineDot: {
     position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#10B981', // green
-    borderWidth: 2,
-    borderColor: '#FFF',
+    bottom: -2,
+    right: -2,
+    width: 14,
+    height: 14,
+    backgroundColor: '#10B981',
+    borderRadius: 7,
+    borderWidth: 3,
+    borderColor: '#FFFFFF',
   },
   matchBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F3E8FF',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 12,
     gap: 4,
   },
   matchText: {
-    color: '#7C3AED',
     fontSize: 10,
     fontWeight: '800',
+    color: '#7C3AED',
   },
   tutorName: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 17,
+    fontWeight: '800',
     color: '#111827',
     marginBottom: 4,
   },
   tutorSubjects: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#6B7280',
     marginBottom: 16,
   },
@@ -437,119 +403,114 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    paddingTop: 16,
   },
   ratingRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
   },
   ratingText: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '800',
     color: '#111827',
-    marginLeft: 4,
-    marginRight: 4,
   },
   reviewsText: {
-    fontSize: 12,
-    color: '#6B7280',
+    fontSize: 11,
+    color: '#9CA3AF',
   },
   rateText: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: 13,
+    fontWeight: '800',
     color: '#4F46E5',
   },
   popularSubjectsBox: {
-    backgroundColor: '#F3F4F6', // light gray rounded box
-    paddingVertical: 24,
-    paddingHorizontal: 20,
-    borderRadius: 40,
-    marginHorizontal: 16,
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 20,
+    borderRadius: 32,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    elevation: 2,
   },
   subjectsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    marginTop: 20,
     justifyContent: 'space-between',
-    marginTop: 16,
-    gap: 12,
   },
   subjectCard: {
-    width: '48%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
-    padding: 16,
+    width: '30%',
     alignItems: 'center',
-    marginBottom: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 5,
-    elevation: 1,
+    marginBottom: 20,
   },
   subjectIconWrap: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   subjectName: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#111827',
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#374151',
+    textAlign: 'center',
   },
   badgeLightPurple: {
     backgroundColor: '#EBE2FF',
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 8,
   },
   badgeLightPurpleText: {
-    color: '#7C3AED',
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '800',
+    color: '#7C3AED',
   },
   sessionCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: '#FFFFFF',
     marginHorizontal: 20,
-    marginBottom: 12,
     borderRadius: 24,
-    padding: 12,
-    borderLeftWidth: 4,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    borderLeftWidth: 5,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
+    shadowOpacity: 0.02,
+    shadowRadius: 5,
+    elevation: 1,
   },
   sessionDateCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
   },
   sessionDateText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
-    color: '#111827',
+    color: '#374151',
     textAlign: 'center',
-    lineHeight: 14,
   },
   sessionDetails: {
     flex: 1,
   },
   sessionTitle: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#111827',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   sessionTimeInfo: {
     fontSize: 12,
@@ -559,45 +520,40 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#EBE2FF',
+    backgroundColor: '#EEF2FF',
     justifyContent: 'center',
     alignItems: 'center',
   },
   emptySessionBox: {
-    marginTop: 8,
-    marginHorizontal: 20,
-    paddingVertical: 16,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderStyle: 'dashed',
+    paddingVertical: 10,
     alignItems: 'center',
   },
   emptySessionText: {
+    fontSize: 12,
     color: '#9CA3AF',
-    fontSize: 13,
+    fontStyle: 'italic',
   },
   pulseCard: {
+    backgroundColor: '#4F46E5',
     marginHorizontal: 20,
-    marginBottom: 40,
-    backgroundColor: '#7C3AED', // Purple block (since gradients are trickier)
     borderRadius: 32,
     padding: 24,
+    marginBottom: 40,
   },
   pulseHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
   pulseTitle: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '800',
     color: '#FFFFFF',
   },
   pulseDesc: {
     fontSize: 14,
-    color: '#EBE2FF',
+    color: '#E0E7FF',
     marginBottom: 20,
     lineHeight: 20,
   },
@@ -608,15 +564,15 @@ const styles = StyleSheet.create({
   },
   progressTrack: {
     flex: 1,
-    height: 10,
+    height: 8,
     backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 5,
+    borderRadius: 4,
     marginRight: 12,
   },
   progressFill: {
-    height: 10,
+    height: '100%',
     backgroundColor: '#FFFFFF',
-    borderRadius: 5,
+    borderRadius: 4,
   },
   progressText: {
     color: '#FFFFFF',

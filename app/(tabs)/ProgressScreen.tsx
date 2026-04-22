@@ -7,19 +7,17 @@ import {
   ScrollView, 
   TouchableOpacity,
   Dimensions,
-  Platform
+  Platform,
+  ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../context/ThemeContext';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import { useProfile } from '../../context/ProfileContext';
 
 const { width } = Dimensions.get('window');
-
-const SUBJECT_PROGRESS = [
-  { id: '1', title: 'Matematika Tingkat Lanjut', score: 92, color: '#4F46E5', icon: 'calculator' },
-  { id: '2', title: 'Fisika Kuantum', score: 68, color: '#9333EA', icon: 'flask' },
-  { id: '3', title: 'Filsafat Modern', score: 45, color: '#E11D48', icon: 'book' },
-];
 
 const BADGES = [
   { id: '1', title: 'Bangun Pagi', desc: '4 sesi sebelum jam 8 Pagi', bg: '#FDE047', icon: 'flash', iconColor: '#A16207', earned: true },
@@ -41,6 +39,13 @@ const CHART_DATA = [
 export default function ProgressScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const { profileData } = useProfile();
+
+  // Convex Integration
+  const currentUser = useQuery(api.users.getUserByEmail, { email: profileData.email });
+  const sessions = useQuery(api.sessions.getSessionsByUser, 
+    currentUser ? { userId: currentUser._id, role: currentUser.role } : "skip"
+  );
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
@@ -89,15 +94,15 @@ export default function ProgressScreen() {
         {/* Main Mastery Card */}
         <View style={[styles.masteryCard, { backgroundColor: colors.primary }]}>
            <Text style={styles.masterySuperTitle}>DENYUT BELAJAR</Text>
-           <Text style={styles.masteryTitle}>Penguasaan{'\n'}Keseluruhan</Text>
+           <Text style={styles.masteryTitle}>Sesi Terdaftar</Text>
            
            <View style={styles.masteryScoreRow}>
-              <Text style={styles.masteryScoreValue}>84<Text style={styles.masteryScorePercent}>%</Text></Text>
-              <Text style={styles.masteryTargetText}>Target: 90%</Text>
+              <Text style={styles.masteryScoreValue}>{sessions?.length || 0}</Text>
+              <Text style={styles.masteryTargetText}>Target: 10 Sesi</Text>
            </View>
            
            <View style={styles.progressBarBg}>
-              <View style={[styles.progressBarFill, { width: '84%', backgroundColor: '#FFF' }]} />
+              <View style={[styles.progressBarFill, { width: `${Math.min((sessions?.length || 0) * 10, 100)}%`, backgroundColor: '#FFF' }]} />
            </View>
         </View>
 
@@ -121,25 +126,37 @@ export default function ProgressScreen() {
 
         {/* Subject Progress List */}
         <View style={styles.sectionContainer}>
-           <Text style={[styles.sectionTitle, { color: colors.text }]}>Kemahiran Mata Kuliah</Text>
+           <Text style={[styles.sectionTitle, { color: colors.text }]}>Status Sesi Belajar</Text>
            
-           <View style={styles.subjectListWrapper}>
-              {SUBJECT_PROGRESS.map((sub) => (
-                <View key={sub.id} style={[styles.subjectRowCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                   <View style={styles.subIconRow}>
-                      <View style={[styles.subIconBox, { backgroundColor: sub.color + '20' }]}>
-                         <Ionicons name={sub.icon as any} size={16} color={sub.color} />
-                      </View>
-                      <Text style={[styles.subTextTitle, { color: colors.text }]}>{sub.title}</Text>
-                   </View>
-                   <Text style={[styles.subTextScore, { color: sub.color }]}>{sub.score}%</Text>
+           {!sessions ? (
+             <ActivityIndicator size="small" color="#4F46E5" />
+           ) : (
+             <View style={styles.subjectListWrapper}>
+                {sessions.map((session) => (
+                  <View key={session._id} style={[styles.subjectRowCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                     <View style={styles.subIconRow}>
+                        <View style={[styles.subIconBox, { backgroundColor: '#4F46E520' }]}>
+                           <Ionicons name="book" size={16} color="#4F46E5" />
+                        </View>
+                        <View>
+                          <Text style={[styles.subTextTitle, { color: colors.text }]}>{session.subject}</Text>
+                          <Text style={[styles.subTextSubtitle, { color: colors.textSecondary, fontSize: 10 }]}>Tutor: {session.tutor?.name}</Text>
+                        </View>
+                     </View>
+                     <Text style={[styles.subTextScore, { color: session.status === 'booked' ? '#4F46E5' : '#10B981' }]}>
+                       {session.status.toUpperCase()}
+                     </Text>
 
-                   <View style={[styles.subProgressBarBg, { backgroundColor: colors.border }]}>
-                      <View style={[styles.subProgressBarFill, { width: `${sub.score}%`, backgroundColor: sub.color }]} />
-                   </View>
-                </View>
-              ))}
-           </View>
+                     <View style={[styles.subProgressBarBg, { backgroundColor: colors.border }]}>
+                        <View style={[styles.subProgressBarFill, { width: session.status === 'completed' ? '100%' : '50%', backgroundColor: session.status === 'completed' ? '#10B981' : '#4F46E5' }]} />
+                     </View>
+                  </View>
+                ))}
+                {sessions.length === 0 && (
+                  <Text style={{ textAlign: 'center', color: colors.textSecondary }}>Belum ada sesi yang dipesan.</Text>
+                )}
+             </View>
+           )}
         </View>
 
         {/* Badges Grid */}
@@ -198,8 +215,6 @@ export default function ProgressScreen() {
         </View>
 
       </ScrollView>
-
-      {/* Manual BottomTabBar removed */}
     </SafeAreaView>
   );
 }
@@ -243,7 +258,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   scrollContent: {
-    paddingBottom: 110, // account for floating bottom bar
+    paddingBottom: 30,
   },
   titleSection: {
     paddingHorizontal: 20,
@@ -358,10 +373,6 @@ const styles = StyleSheet.create({
     color: '#4F46E5',
     lineHeight: 44,
   },
-  masteryScorePercent: {
-    fontSize: 20,
-    fontWeight: '700',
-  },
   masteryTargetText: {
     fontSize: 12,
     fontWeight: '600',
@@ -378,7 +389,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   pointsCard: {
-    backgroundColor: '#9333EA', // deep purple
+    backgroundColor: '#9333EA', 
     marginHorizontal: 20,
     borderRadius: 32,
     padding: 24,
@@ -417,7 +428,7 @@ const styles = StyleSheet.create({
   },
   pointsSubText: {
     fontSize: 12,
-    color: '#E9D5FF', // lighter purple text
+    color: '#E9D5FF', 
     marginBottom: 24,
   },
   pointsActionBtn: {
@@ -487,10 +498,14 @@ const styles = StyleSheet.create({
     color: '#111827',
     flexShrink: 1,
   },
+  subTextSubtitle: {
+    fontSize: 10,
+    fontWeight: '400',
+  },
   subTextScore: {
     fontSize: 13,
     fontWeight: '800',
-    width: 40,
+    width: 80,
     textAlign: 'right',
   },
   subProgressBarBg: {
@@ -524,7 +539,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   badgeCard: {
-    width: (width - 40 - 12) / 2, // halfway minus gap
+    width: (width - 40 - 12) / 2, 
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
     padding: 20,
@@ -557,7 +572,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   textMuted: {
-    color: '#9CA3AF', // lighter grey text if not earned
+    color: '#9CA3AF', 
   },
   chartCard: {
     backgroundColor: '#FFFFFF',
@@ -627,7 +642,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
-    height: 140, // fix exact height for bars
+    height: 140, 
   },
   chartBarCol: {
     alignItems: 'center',
@@ -637,21 +652,16 @@ const styles = StyleSheet.create({
   },
   chartBarFill: {
     width: 16,
-    backgroundColor: '#E0E7FF', // faint blue
+    backgroundColor: '#E0E7FF', 
     borderRadius: 8,
     marginBottom: 12,
   },
   chartBarFillActive: {
-    backgroundColor: '#4F46E5', // vibrant purple
+    backgroundColor: '#4F46E5', 
   },
   chartBarLabel: {
     fontSize: 10,
     fontWeight: '600',
     color: '#9CA3AF',
   },
-  tabLabel: {
-    fontSize: 10,
-    color: '#9CA3AF',
-    marginTop: 4,
-  }
 });

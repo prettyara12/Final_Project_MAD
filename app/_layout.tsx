@@ -1,13 +1,25 @@
 import { Stack } from "expo-router";
 import { ThemeProvider } from "../context/ThemeContext";
 import { ProfileProvider } from "../context/ProfileContext";
+import { ConvexProvider, ConvexReactClient } from "convex/react";
+
+const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
+console.log("Initializing Convex with URL:", convexUrl);
+
+if (!convexUrl) {
+  console.error("EXPO_PUBLIC_CONVEX_URL is not defined! Check your .env.local file.");
+}
+
+const convex = new ConvexReactClient(convexUrl!);
 
 export default function RootLayout() {
   return (
-    <ThemeProvider>
-      <ProfileProvider>
-        <Stack screenOptions={{ headerShown: false }} />
-      </ProfileProvider>
-    </ThemeProvider>
+    <ConvexProvider client={convex}>
+      <ThemeProvider>
+        <ProfileProvider>
+          <Stack screenOptions={{ headerShown: false }} />
+        </ProfileProvider>
+      </ThemeProvider>
+    </ConvexProvider>
   );
 }

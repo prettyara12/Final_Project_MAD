@@ -1,536 +1,472 @@
-import React, { useState, useRef } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  SafeAreaView, 
-  ScrollView, 
-  TextInput, 
-  TouchableOpacity,
+import { Ionicons } from '@expo/vector-icons';
+import { useMutation, useQuery } from 'convex/react';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Dimensions,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
-  Dimensions
+  SafeAreaView,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import Animated, { FadeIn, FadeInDown, Layout } from 'react-native-reanimated';
+import { useProfile } from '../../context/ProfileContext';
 import { useTheme } from '../../context/ThemeContext';
-// import { BottomTabBar } from '../components/BottomTabBar'; <--- Removed
+import { api } from '../../convex/_generated/api';
+import { getGeminiResponse } from '../../services/gemini';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 
-const INITIAL_MESSAGES = [
-  {
-    id: '1',
-    sender: 'ai',
-    text: 'Halo! Saya Mitra Akademik AI Anda. Saya dapat membantu Anda menyelesaikan persamaan kompleks, menjelaskan peristiwa sejarah, atau bahkan membantu Anda menyusun esai berikutnya. Apa yang kita pelajari hari ini?',
-    options: [
-      'Jelaskan Fisika Kuantum',
-      'Bantuan Masalah Matematika'
-    ]
-  },
-  {
-    id: '2',
-    sender: 'user',
-    text: 'Bisakah Anda menjelaskan perbedaan antara Mitosis dan Meiosis dalam istilah sederhana? Saya ada tes biologi besok.'
-  },
-  {
-    id: '3',
-    sender: 'ai',
-    isRich: true, // specific flag to render the rich content block
-  }
-];
+// AI Chat Integration
+const AI_BOT_ID = "ai_system_bot";
 
 export default function AIChatScreen() {
-  const router = useRouter();
   const { colors, isDark } = useTheme();
-  const [messages, setMessages] = useState(INITIAL_MESSAGES);
+  const { profileData } = useProfile();
   const [inputText, setInputText] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
-  const handleSend = () => {
-    if (inputText.trim().length === 0) return;
-    
-    // Add user message
-    const newMessage = {
-      id: Date.now().toString(),
-      sender: 'user',
-      text: inputText.trim()
-    };
-    
-    setMessages(prev => [...prev, newMessage]);
-    setInputText('');
+  // Convex Integration
+  const currentUser = useQuery(api.users.getUserByEmail, { email: profileData.email });
+  const messages = useQuery(api.messages.getMessages,
+    currentUser ? { userA: currentUser._id, userB: AI_BOT_ID } : "skip"
+  );
+  const sendMessage = useMutation(api.messages.sendMessage);
+  const deleteConversation = useMutation(api.messages.deleteConversation);
 
-    // Simulate AI typing / response delay
-    setTimeout(() => {
-      setMessages(prev => [...prev, {
-        id: (Date.now() + 1).toString(),
-        sender: 'ai',
-        text: 'Ini adalah contoh respons simulasi dari AI Assistant. Fitur ini akan segera diintegrasikan dengan database Convex!'
-      }]);
-    }, 1500);
+  const handleDeleteChat = () => {
+    if (!currentUser || !messages || messages.length === 0) return;
+
+    Alert.alert(
+      "Hapus Chat",
+      "Apakah Anda yakin ingin menghapus semua riwayat percakapan dengan EduPartner AI?",
+      [
+        { text: "Batal", style: "cancel" },
+        { 
+          text: "Hapus", 
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteConversation({ userA: currentUser._id, userB: AI_BOT_ID });
+            } catch (error) {
+              console.error("Failed to delete chat:", error);
+              Alert.alert("Error", "Gagal menghapus chat. Silakan coba lagi.");
+            }
+          }
+        }
+      ]
+    );
   };
 
-  const renderBubble = (msg: any) => {
-    const isUser = msg.sender === 'user';
+  const handleSend = async () => {
+    if (inputText.trim().length === 0 || !currentUser) {
+      if (!currentUser && inputText.trim().length > 0) {
+        Alert.alert("Info", "Silakan lengkapi profil Anda terlebih dahulu untuk menggunakan AI Chat.");
+      }
+      return;
+    }
+
+    const text = inputText.trim();
+    setInputText('');
+
+    try {
+      // 1. Send user message to Convex
+      await sendMessage({
+        senderId: currentUser._id,
+        receiverId: AI_BOT_ID,
+        content: text,
+      });
+
+      // 2. Prepare Gemini history
+      setIsTyping(true);
+
+      const chatHistory = (messages || []).map(msg => ({
+        role: msg.senderId === currentUser._id ? "user" : "model" as "user" | "model",
+        parts: [{ text: msg.content }]
+      }));
+
+      // 3. Get AI Response
+      const aiResponse = await getGeminiResponse(text, chatHistory);
+
+      // 4. Send AI response to Convex
+      await sendMessage({
+        senderId: AI_BOT_ID,
+        receiverId: currentUser._id,
+        content: aiResponse,
+      });
+
+    } catch (error) {
+      console.error("Failed to process chat:", error);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const renderBubble = (msg: any, index: number) => {
+    const isUser = msg.senderId === currentUser?._id;
 
     return (
-      <View key={msg.id} style={[styles.messageRow, isUser ? styles.messageRowUser : styles.messageRowAI]}>
-        
+      <Animated.View 
+        key={msg._id} 
+        entering={FadeInDown.delay(100).springify()}
+        layout={Layout.springify()}
+        style={[
+          styles.messageWrapper, 
+          isUser ? styles.userWrapper : styles.aiWrapper
+        ]}
+      >
         {!isUser && (
-          <View style={[styles.aiAvatar, { backgroundColor: colors.primary }]}>
-            <Ionicons name="hardware-chip" size={16} color="#FFF" />
+          <View style={[styles.avatarSmall, { backgroundColor: colors.primary }]}>
+            <Ionicons name="sparkles" size={14} color="#FFF" />
           </View>
         )}
 
-        <View style={isUser ? styles.bubbleUserWrapper : styles.bubbleAIWrapper}>
-          <View style={[styles.bubble, isUser ? [styles.bubbleUser, { backgroundColor: colors.primary }] : [styles.bubbleAI, { backgroundColor: colors.card, borderColor: colors.border }]]}>
-            
-            {/* Standard Text Message */}
-            {msg.text && (
-              <Text style={[styles.messageText, isUser ? styles.messageTextUser : [styles.messageTextAI, { color: colors.text }]]}>
-                {msg.text}
-              </Text>
-            )}
-
-            {/* AI Options Chips */}
-            {msg.options && (
-              <View style={styles.optionsContainer}>
-                {msg.options.map((opt: string, idx: number) => (
-                  <TouchableOpacity key={idx} style={[styles.optionChip, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                    <Text style={[styles.optionChipText, { color: colors.primary }]}>{opt}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-
-            {/* Custom Rich Content Message (Cell Division Example) */}
-            {msg.isRich && (
-              <View style={styles.richContent}>
-                 <Text style={[styles.richTitle, { color: colors.text }]}>Penjelasan{'\n'}Pembelahan Sel</Text>
-                 
-                 <View style={styles.richList}>
-                    <View style={styles.richListItem}>
-                      <View style={[styles.richListBorder, { backgroundColor: colors.primary }]} />
-                      <View style={styles.richListContent}>
-                        <Text style={[styles.richListTitle, { color: colors.text }]}>1. Mitosis: Mesin Fotokopi</Text>
-                        <Text style={[styles.richListText, { color: colors.textSecondary }]}>Anggap ini seperti membuat fotokopi yang tepat. Satu sel membelah sekali untuk membentuk dua sel "anak" yang identik. Ini adalah cara tubuh Anda tumbuh atau menyembuhkan luka.</Text>
-                      </View>
-                    </View>
-                    
-                    <View style={styles.richListItem}>
-                      <View style={[styles.richListBorder, { backgroundColor: colors.primary }]} />
-                      <View style={styles.richListContent}>
-                        <Text style={[styles.richListTitle, { color: colors.text }]}>2. Meiosis: Pengocok</Text>
-                        <Text style={[styles.richListText, { color: colors.textSecondary }]}>Ini lebih seperti mengocok setumpuk kartu. Satu sel membelah dua kali untuk membentuk empat sel unik dengan setengah DNA asli. Ini hanya terjadi untuk reproduksi.</Text>
-                      </View>
-                    </View>
-                 </View>
-
-                 {/* Rich Cards */}
-                 <View style={styles.richCardsRow}>
-                    <View style={[styles.richCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                       <View style={styles.richCardIconBoxBlue}>
-                          <Ionicons name="copy" size={18} color={colors.primary} />
-                       </View>
-                       <Text style={[styles.richCardSubtitle, { color: colors.textSecondary }]}>MITOSIS</Text>
-                       <Text style={[styles.richCardTitle, { color: colors.text }]}>Sel Somatik (Tubuh)</Text>
-                    </View>
-                 </View>
-
-                 <View style={styles.richCardsRow}>
-                    <View style={[styles.richCard, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                       <View style={styles.richCardIconBoxPurple}>
-                          <Ionicons name="people" size={18} color="#9333EA" />
-                       </View>
-                       <Text style={[styles.richCardSubtitle, { color: colors.textSecondary }]}>MEIOSIS</Text>
-                       <Text style={[styles.richCardTitle, { color: colors.text }]}>Gamet (Sel Kelamin)</Text>
-                    </View>
-                 </View>
-
-                 {/* Source Footer */}
-                 <View style={[styles.richFooter, { borderTopColor: colors.border }]}>
-                    <Text style={[styles.richSourceText, { color: colors.textSecondary }]}>Sumber:{'\n'}Campbell Biology, Khan Academy</Text>
-                    <View style={styles.richFeedback}>
-                       <TouchableOpacity style={styles.feedbackBtn}>
-                         <Ionicons name="thumbs-up" size={16} color={colors.textSecondary} />
-                       </TouchableOpacity>
-                       <TouchableOpacity style={styles.feedbackBtn}>
-                         <Ionicons name="thumbs-down" size={16} color={colors.textSecondary} />
-                       </TouchableOpacity>
-                    </View>
-                 </View>
-
-              </View>
-            )}
-
-          </View>
+        <View style={[
+          styles.bubble,
+          isUser 
+            ? [styles.bubbleUser, { backgroundColor: colors.primary }]
+            : [styles.bubbleAI, { backgroundColor: isDark ? '#262626' : '#F3F4F6' }]
+        ]}>
+          <Text style={[
+            styles.messageText,
+            isUser ? styles.textUser : [styles.textAI, { color: colors.text }]
+          ]}>
+            {msg.content}
+          </Text>
         </View>
-
-        {isUser && (
-          <View style={[styles.userAvatar, { backgroundColor: colors.avatarBg }]}>
-            <Ionicons name="person" size={16} color="#FFF" />
-          </View>
-        )}
-
-      </View>
+      </Animated.View>
     );
   };
 
   return (
-    <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-      <KeyboardAvoidingView 
-        style={styles.container} 
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
-        {/* Header */}
-        <View style={[styles.header, { backgroundColor: colors.background }]}>
-          <View style={styles.headerLeft}>
-            <View style={[styles.headerIconWrapper, { backgroundColor: colors.primary }]}>
-               <Ionicons name="hardware-chip" size={18} color="#FFF" />
-            </View>
-            <Text style={[styles.headerLogoText, { color: colors.text }]}>EduPartner AI</Text>
-          </View>
-
-          <View style={styles.headerRight}>
-            <TouchableOpacity 
-              style={styles.notificationBtn}
-              onPress={() => router.push('/NotificationScreen' as any)}
+    <View style={[styles.mainContainer, { backgroundColor: colors.background }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+      
+      {/* Modern Header */}
+      <SafeAreaView style={{ backgroundColor: colors.background, zIndex: 10 }}>
+        <View style={[styles.header, { borderBottomColor: isDark ? '#333' : '#EEE' }]}>
+          <View style={styles.headerInfo}>
+            <View
+              style={[styles.headerIcon, { backgroundColor: colors.primary }]}
             >
-              <Ionicons name="notifications" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
-            <View style={[styles.avatarMini, { backgroundColor: colors.avatarBg }]}>
-              <Ionicons name="person" size={16} color="#FFF" />
+              <Ionicons name="hardware-chip-outline" size={20} color="#FFF" />
+            </View>
+            <View>
+              <Text style={[styles.headerTitle, { color: colors.text }]}>EduPartner AI</Text>
+              <View style={styles.statusBadge}>
+                <View style={styles.statusDot} />
+                <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Gemini 2.5 Flash</Text>
+              </View>
             </View>
           </View>
+          <TouchableOpacity 
+            style={[styles.iconButton, { backgroundColor: colors.card }]}
+            onPress={handleDeleteChat}
+          >
+            <Ionicons name="trash-outline" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
         </View>
+      </SafeAreaView>
 
-        {/* Chat List */}
-        <ScrollView 
+      <KeyboardAvoidingView
+        style={styles.content}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
+        <ScrollView
           ref={scrollViewRef}
           onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {messages.map(renderBubble)}
+          {currentUser === undefined || (currentUser && messages === undefined) ? (
+            <View style={styles.centerLoading}>
+              <ActivityIndicator size="large" color={colors.primary} />
+            </View>
+          ) : (
+            <>
+              {(!messages || messages.length === 0) && (
+                <Animated.View entering={FadeIn.duration(600)} style={styles.welcomeContainer}>
+                  <View style={[styles.welcomeIcon, { backgroundColor: colors.primary + '10' }]}>
+                    <Ionicons name="chatbubble-ellipses-outline" size={48} color={colors.primary} />
+                  </View>
+                  <Text style={[styles.welcomeTitle, { color: colors.text }]}>Ada yang bisa dibantu?</Text>
+                  <Text style={[styles.welcomeSubtitle, { color: colors.textSecondary }]}>
+                    Tanyakan apa saja seputar pelajaran, tugas, atau minta saran belajar pada EduPartner AI.
+                  </Text>
+                  
+                  <View style={styles.suggestionGrid}>
+                    {['Bantu kerjakan soal MTK', 'Jelaskan Hukum Newton', 'Tips belajar efektif'].map((item, i) => (
+                      <TouchableOpacity 
+                        key={i} 
+                        style={[styles.suggestionChip, { backgroundColor: colors.card, borderColor: colors.border }]}
+                        onPress={() => setInputText(item)}
+                      >
+                        <Text style={[styles.suggestionText, { color: colors.textSecondary }]}>{item}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </Animated.View>
+              )}
+              
+              {messages?.map((msg, index) => renderBubble(msg, index))}
+
+              {isTyping && (
+                <View style={styles.typingIndicator}>
+                  <View style={[styles.avatarSmall, { backgroundColor: colors.primary }]}>
+                    <Ionicons name="sparkles" size={14} color="#FFF" />
+                  </View>
+                  <View style={[styles.bubbleAI, styles.typingBubble, { backgroundColor: isDark ? '#262626' : '#F3F4F6' }]}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                    <Text style={[styles.typingText, { color: colors.textSecondary }]}>Sedang berpikir...</Text>
+                  </View>
+                </View>
+              )}
+            </>
+          )}
         </ScrollView>
 
-        {/* Input Field Section */}
-        <View style={[styles.inputAreaWrapper, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
-          <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <TouchableOpacity style={styles.attachBtn}>
-              <Ionicons name="attach" size={24} color={colors.textSecondary} />
+        {/* Modern Input Bar */}
+        <View style={[styles.inputBar, { backgroundColor: isDark ? colors.background : '#FFF', borderTopWidth: 1, borderTopColor: colors.border }]}>
+          <View style={[styles.inputContainer, { backgroundColor: isDark ? '#262626' : '#F3F4F6' }]}>
+            <TouchableOpacity style={styles.attachmentButton}>
+              <Ionicons name="happy-outline" size={24} color={colors.textSecondary} />
             </TouchableOpacity>
             
             <TextInput
               style={[styles.textInput, { color: colors.text }]}
-              placeholder="Ajukan pertanyaan..."
+              placeholder="Tanya sesuatu..."
               placeholderTextColor={colors.textSecondary}
               value={inputText}
               onChangeText={setInputText}
               multiline
+              maxLength={2000}
             />
 
-            <TouchableOpacity 
-              style={[styles.sendBtn, inputText.trim().length > 0 ? { backgroundColor: colors.primary } : { backgroundColor: colors.border }]} 
+            <TouchableOpacity
+              style={[
+                styles.sendButton,
+                { backgroundColor: inputText.trim() ? colors.primary : colors.textSecondary + '20' }
+              ]}
               onPress={handleSend}
+              disabled={!inputText.trim()}
             >
-              <Ionicons name="send" size={16} color="#FFF" />
+              <Ionicons name="arrow-up" size={22} color="#FFF" />
             </TouchableOpacity>
           </View>
         </View>
-
       </KeyboardAvoidingView>
-      {/* Manual BottomTabBar removed */}
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#FAFAFC', // light grey bg
-  },
-  container: {
+  mainContainer: {
     flex: 1,
   },
   header: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: Platform.OS === 'android' ? 40 : 16,
-    paddingBottom: 20,
-    backgroundColor: '#FAFAFC',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
   },
-  headerLeft: {
+  headerInfo: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  headerIconWrapper: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#4F46E5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-  },
-  headerLogoText: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#4F46E5', // purple main brand
-  },
-  headerRight: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  notificationBtn: {
-    padding: 2,
-  },
-  avatarMini: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#111827',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  scrollContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 120, // increased for floating input + tab bar
-    paddingTop: 10,
-  },
-  messageRow: {
-    flexDirection: 'row',
-    marginBottom: 24,
-    alignItems: 'flex-start',
-    width: '100%',
-  },
-  messageRowAI: {
-    justifyContent: 'flex-start',
-  },
-  messageRowUser: {
-    justifyContent: 'flex-end',
-  },
-  aiAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#6366F1', // indigo AI
+  headerIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
-  userAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#A855F7', // user purple
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: '700',
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10B981',
+    marginRight: 6,
+  },
+  statusLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  iconButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 12,
   },
-  bubbleAIWrapper: {
+  content: {
     flex: 1,
-    maxWidth: '85%',
-    alignItems: 'flex-start',
   },
-  bubbleUserWrapper: {
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 20, 
+    flexGrow: 1,
+  },
+  centerLoading: {
     flex: 1,
-    maxWidth: '80%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  messageWrapper: {
+    flexDirection: 'row',
+    marginBottom: 20,
     alignItems: 'flex-end',
   },
+  userWrapper: {
+    justifyContent: 'flex-end',
+  },
+  aiWrapper: {
+    justifyContent: 'flex-start',
+  },
+  avatarSmall: {
+    width: 24,
+    height: 24,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+    marginBottom: 4,
+  },
   bubble: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderRadius: 24,
-  },
-  bubbleAI: {
-    backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 8,
-    elevation: 1,
-  },
-  bubbleUser: {
-    backgroundColor: '#4F46E5', // user primary
-    borderTopRightRadius: 8,
-  },
-  messageText: {
-    fontSize: 14,
-    lineHeight: 22,
-  },
-  messageTextAI: {
-    color: '#374151',
-  },
-  messageTextUser: {
-    color: '#FFFFFF',
-  },
-  optionsContainer: {
-    marginTop: 16,
-    gap: 10,
-  },
-  optionChip: {
-    backgroundColor: '#F3F4F6',
+    maxWidth: width * 0.78,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
-  optionChipText: {
-    color: '#4F46E5',
-    fontSize: 12,
-    fontWeight: '600',
-    textAlign: 'center',
+  bubbleUser: {
+    borderBottomRightRadius: 4,
   },
-  // Rich Content specific classes
-  richContent: {
-    width: '100%',
+  bubbleAI: {
+    borderBottomLeftRadius: 4,
   },
-  richTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#4F46E5',
-    marginBottom: 20,
+  messageText: {
+    fontSize: 15,
     lineHeight: 22,
   },
-  richList: {
+  textUser: {
+    color: '#FFFFFF',
+    fontWeight: '500',
+  },
+  textAI: {
+    fontWeight: '400',
+  },
+  welcomeContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 30,
+    marginTop: height * 0.1,
+  },
+  welcomeIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 24,
   },
-  richListItem: {
+  welcomeTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  welcomeSubtitle: {
+    fontSize: 15,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 30,
+  },
+  suggestionGrid: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 10,
+  },
+  suggestionChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  suggestionText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  typingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 20,
   },
-  richListBorder: {
-    width: 2,
-    backgroundColor: '#E5E7EB', // light grey border
-    marginRight: 16,
-    borderRadius: 1,
-  },
-  richListContent: {
-    flex: 1,
-  },
-  richListTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 6,
-  },
-  richListText: {
-    fontSize: 13,
-    color: '#4B5563',
-    lineHeight: 20,
-  },
-  richCardsRow: {
-    marginBottom: 12,
-    alignItems: 'center',
-  },
-  richCard: {
-    width: '100%',
-    backgroundColor: '#FAFAFC', // very light grey for the inner card box
-    borderRadius: 20,
-    padding: 16,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
-  },
-  richCardIconBoxBlue: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#E0E7FF', // lighter blue
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  richCardIconBoxPurple: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    backgroundColor: '#F3E8FF', // ligher purple
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  richCardSubtitle: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#6B7280',
-    letterSpacing: 1,
-    marginBottom: 4,
-  },
-  richCardTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  richFooter: {
+  typingBubble: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-  },
-  richSourceText: {
-    fontSize: 10,
-    color: '#9CA3AF',
-    lineHeight: 14,
-    flex: 1,
-    marginRight: 10,
-  },
-  richFeedback: {
-    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     gap: 8,
   },
-  feedbackBtn: {
-    padding: 4,
+  typingText: {
+    fontSize: 13,
+    fontWeight: '500',
   },
-  // Floating Input Field
-  inputAreaWrapper: {
-    position: 'absolute',
-    bottom: 10, // Adjusted for persistent tab bar (since it's inside the layout now)
-    left: 16,
-    right: 16,
+  inputBar: {
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: Platform.OS === 'ios' ? 20 : 15,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 32,
+    borderRadius: 25,
     paddingHorizontal: 8,
-    paddingVertical: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 3,
+    paddingVertical: 6,
   },
-  attachBtn: {
-    padding: 12,
+  attachmentButton: {
+    padding: 8,
   },
   textInput: {
     flex: 1,
-    minHeight: 40,
-    maxHeight: 100,
-    fontSize: 14,
-    color: '#111827',
-    paddingHorizontal: 8,
-    paddingTop: 10, // vertical alignment for multiline
+    fontSize: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    maxHeight: 120,
   },
-  sendBtn: {
+  sendButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#D1D5DB', // inactive grey
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: 8,
-  },
-  sendBtnActive: {
-    backgroundColor: '#4F46E5', // active blue/purple
   },
 });

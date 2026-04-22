@@ -10,12 +10,9 @@ export default function TabsLayout() {
       tabBar={(props) => <BottomTabBar {...props} />}
       screenOptions={{
         headerShown: false,
+        tabBarHideOnKeyboard: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
-        tabBarStyle: {
-          backgroundColor: colors.tabBar,
-          borderTopColor: colors.tabBarBorder,
-        },
       }}
     >
       <Tabs.Screen

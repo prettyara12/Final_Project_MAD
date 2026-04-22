@@ -7,11 +7,15 @@ import {
   ScrollView, 
   TouchableOpacity,
   Dimensions,
-  Platform
+  Platform,
+  Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../../context/ThemeContext';
+import { useMutation, useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import { useProfile } from '../../context/ProfileContext';
 
 const { width } = Dimensions.get('window');
 
@@ -52,15 +56,43 @@ const TIME_SLOTS = [
 
 export default function BookingScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const { colors, isDark } = useTheme();
+  const { profileData } = useProfile();
+  
   const [selectedDate, setSelectedDate] = useState('10');
   const [selectedTime, setSelectedTime] = useState('10:30 AM');
+  const [isBooking, setIsBooking] = useState(false);
 
-  // Dummy action for Konfirmasi Pesanan button
-  const handleConfirm = () => {
-    console.log("Confirming booking for date:", selectedDate, "at time:", selectedTime);
-    // Move to Sesi (SubjectScreen)
-    router.push('/SubjectScreen' as any);
+  // Convex Integration
+  const currentUser = useQuery(api.users.getUserByEmail, { email: profileData.email });
+  const bookSession = useMutation(api.sessions.bookSession);
+
+  const handleConfirm = async () => {
+    if (!currentUser || !params.tutorId) {
+      Alert.alert("Error", "Informasi pengguna atau tutor tidak lengkap.");
+      return;
+    }
+
+    setIsBooking(true);
+    try {
+      await bookSession({
+        tutorId: params.tutorId as any,
+        learnerId: currentUser._id,
+        subject: params.subject as string || "General Study",
+        date: `${selectedDate} Okt 2023`,
+        time: selectedTime,
+      });
+      
+      Alert.alert("Sukses", "Sesi belajar berhasil dipesan!", [
+        { text: "OK", onPress: () => router.push('/ProgressScreen' as any) }
+      ]);
+    } catch (error) {
+      Alert.alert("Error", "Gagal memesan sesi. Silakan coba lagi.");
+      console.error(error);
+    } finally {
+      setIsBooking(false);
+    }
   };
 
   return (
@@ -91,7 +123,7 @@ export default function BookingScreen() {
             <Text style={[styles.mainTitleHighlight, { color: colors.primary }]}>Berikutnya</Text>
           </Text>
           <Text style={[styles.mainDesc, { color: colors.textSecondary }]}>
-            Jadwalkan pengalaman belajar yang dipersonalisasi dengan mentor AI atau tutor sebaya kami. Amankan tempat Anda di atrium digital.
+            Jadwalkan pengalaman belajar yang dipersonalisasi dengan tutor pilihanmu.
           </Text>
         </View>
 
@@ -195,19 +227,26 @@ export default function BookingScreen() {
         {/* Selected Session Confirmation Card */}
         <View style={[styles.confirmationCard, { backgroundColor: colors.primary }]}>
            <Text style={styles.confSuperTitle}>SESI TERPILIH</Text>
-           <Text style={styles.confTitle}>Fisika Quantum & Model AI</Text>
+           <Text style={styles.confTitle}>{params.subject || "Fisika Quantum & Model AI"}</Text>
+           <Text style={[styles.confInfoText, { marginBottom: 16, marginLeft: 0 }]}>Tutor: {params.tutorName || "Dr. Sarah Jenkins"}</Text>
            
            <View style={styles.confInfoRow}>
              <Ionicons name="calendar-outline" size={16} color="#EBE2FF" />
-             <Text style={styles.confInfoText}>10 Oktober 2023</Text>
+             <Text style={styles.confInfoText}>{selectedDate} Oktober 2023</Text>
            </View>
            <View style={styles.confInfoRow}>
              <Ionicons name="time-outline" size={16} color="#EBE2FF" />
-             <Text style={styles.confInfoText}>10:30 AM - 11:30 AM</Text>
+             <Text style={styles.confInfoText}>{selectedTime}</Text>
            </View>
 
-           <TouchableOpacity style={styles.confButton} onPress={handleConfirm}>
-              <Text style={[styles.confButtonText, { color: colors.primary }]}>Konfirmasi Pesanan</Text>
+           <TouchableOpacity 
+              style={[styles.confButton, isBooking && { opacity: 0.7 }]} 
+              onPress={handleConfirm}
+              disabled={isBooking}
+            >
+              <Text style={[styles.confButtonText, { color: colors.primary }]}>
+                {isBooking ? "Memproses..." : "Konfirmasi Pesanan"}
+              </Text>
            </TouchableOpacity>
         </View>
 
@@ -217,7 +256,6 @@ export default function BookingScreen() {
             Grup{'\n'}Belajar <Text style={[styles.groupsHeaderHighlight, { color: colors.primary }]}>Direkomendasikan</Text>
           </Text>
           
-          {/* Card 1 */}
           <View style={[styles.groupCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.groupCardContent}>
               <View style={[styles.groupAvatar, { backgroundColor: colors.avatarBg }]}>
@@ -236,7 +274,6 @@ export default function BookingScreen() {
             </View>
           </View>
 
-          {/* Card 2 */}
           <View style={[styles.groupCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={styles.groupCardContent}>
               <View style={[styles.groupAvatar, { backgroundColor: colors.avatarBg }]}>
@@ -255,7 +292,6 @@ export default function BookingScreen() {
             </View>
           </View>
 
-          {/* Create Own Group Card */}
           <View style={[styles.createGroupCard, { backgroundColor: colors.primary }]}>
              <Ionicons name="people" size={32} color="#FFF" style={styles.createGroupIcon} />
              <Text style={styles.createGroupTitle}>Buat Milikmu Sendiri</Text>
@@ -267,8 +303,6 @@ export default function BookingScreen() {
         </View>
 
       </ScrollView>
-
-      {/* Manual BottomTabBar removed */}
     </SafeAreaView>
   );
 }
@@ -276,7 +310,7 @@ export default function BookingScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FAFAFC', // very light gray-purple tint
+    backgroundColor: '#FAFAFC',
   },
   header: {
     flexDirection: 'row',
@@ -312,7 +346,7 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   scrollContent: {
-    paddingBottom: 100, // space for tab bar
+    paddingBottom: 100,
   },
   titleSection: {
     paddingHorizontal: 20,
@@ -408,7 +442,7 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   dateNumInactive: {
-    color: '#D1D5DB', // greyed out
+    color: '#D1D5DB',
   },
   dateNumActive: {
     color: '#FFFFFF',
@@ -451,7 +485,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#4F46E5',
   },
   slotBtnFull: {
-    backgroundColor: '#F9FAFB', // grey bg
+    backgroundColor: '#F9FAFB',
     opacity: 0.6,
   },
   slotText: {
@@ -535,10 +569,10 @@ const styles = StyleSheet.create({
     lineHeight: 30,
   },
   groupsHeaderHighlight: {
-    color: '#9333EA', // purple tint
+    color: '#9333EA',
   },
   groupCard: {
-    backgroundColor: '#F3F4F6', // light gray
+    backgroundColor: '#F3F4F6',
     borderRadius: 24,
     padding: 20,
     marginBottom: 16,
@@ -592,23 +626,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    paddingTop: 12,
   },
   groupTime: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#9333EA', // purple
+    color: '#9333EA',
   },
   groupAction: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#4F46E5', // blue link
+    color: '#4F46E5',
   },
   createGroupCard: {
-    backgroundColor: '#A855F7', // bright purple/pink gradient sim
+    backgroundColor: '#A855F7',
     borderRadius: 32,
     padding: 24,
     alignItems: 'center',
     marginTop: 8,
+    marginBottom: 40,
   },
   createGroupIcon: {
     marginBottom: 12,
@@ -636,9 +674,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 12,
   },
-  tabLabel: {
-    fontSize: 10,
-    color: '#9CA3AF',
-    marginTop: 4,
-  }
 });

@@ -7,21 +7,16 @@ import {
   ScrollView, 
   TouchableOpacity,
   Dimensions,
-  Platform
+  Platform,
+  ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../../context/ThemeContext';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
 
 const { width } = Dimensions.get('window');
-
-const SUBJECTS = [
-  'Kalkulus BC',
-  'Fisika Kuantum',
-  'Aljabar Linear',
-  'Statika',
-  'SAT Matematika',
-];
 
 const DATES = [
   { day: 'SEN', date: '12', active: true },
@@ -61,15 +56,25 @@ const REVIEWS = [
 
 export default function TutorProfileScreen() {
   const router = useRouter();
+  const { id } = useLocalSearchParams();
   const { colors, isDark } = useTheme();
+
+  // Convex Integration
+  const tutor = useQuery(api.tutors.getTutorById, { id: id as any });
 
   const [selectedDate, setSelectedDate] = useState('12');
   const [selectedTime, setSelectedTime] = useState('10:30 AM');
 
   const handleBookSession = () => {
-    // Navigate to booking/confirmation screen
-    console.log("Navigating to BookingScreen");
-    router.push('/BookingScreen' as any);
+    if (!tutor) return;
+    router.push({
+      pathname: '/BookingScreen',
+      params: { 
+        tutorId: tutor.user?._id,
+        tutorName: tutor.user?.name,
+        subject: tutor.subjects[0]
+      }
+    } as any);
   };
 
   const renderStars = (count: number) => {
@@ -83,6 +88,14 @@ export default function TutorProfileScreen() {
       />
     ));
   };
+
+  if (!tutor) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background, justifyContent: 'center' }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
@@ -98,10 +111,7 @@ export default function TutorProfileScreen() {
           </View>
           <Text style={[styles.headerLogoText, { color: colors.primary }]}>EduPartner AI</Text>
         </View>
-        <TouchableOpacity 
-          style={styles.notificationBtn}
-          onPress={() => router.push('/NotificationScreen' as any)}
-        >
+        <TouchableOpacity style={styles.notificationBtn}>
           <Ionicons name="notifications" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
@@ -122,12 +132,12 @@ export default function TutorProfileScreen() {
             </View>
           </View>
 
-          <Text style={[styles.tutorName, { color: colors.text }]}>Dr. Sarah Jenkins</Text>
-          <Text style={[styles.tutorSubject, { color: colors.textSecondary }]}>Matematika Lanjut & Fisika</Text>
+          <Text style={[styles.tutorName, { color: colors.text }]}>{tutor.user?.name}</Text>
+          <Text style={[styles.tutorSubject, { color: colors.textSecondary }]}>{tutor.subjects.join(' & ')}</Text>
 
           <View style={styles.ratingRow}>
-            {renderStars(5)}
-            <Text style={[styles.ratingScore, { color: colors.text }]}>4.9</Text>
+            {renderStars(Math.round(tutor.rating))}
+            <Text style={[styles.ratingScore, { color: colors.text }]}>{tutor.rating.toFixed(1)}</Text>
             <Text style={[styles.ratingReviews, { color: colors.textSecondary }]}>(124 ulasan)</Text>
           </View>
 
@@ -152,7 +162,7 @@ export default function TutorProfileScreen() {
           </View>
           
           <View style={styles.chipsContainer}>
-            {SUBJECTS.map((sub, idx) => (
+            {tutor.subjects.map((sub, idx) => (
               <View key={idx} style={[styles.chipItem, { backgroundColor: colors.border }]}>
                 <Text style={[styles.chipText, { color: colors.textSecondary }]}>{sub}</Text>
               </View>
@@ -162,10 +172,9 @@ export default function TutorProfileScreen() {
 
         {/* About Section */}
         <View style={[styles.cardSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Tentang Dr. Jenkins</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Tentang {tutor.user?.name}</Text>
           <Text style={[styles.aboutText, { color: colors.textSecondary }]}>
-            Saya berspesialisasi dalam membuat konsep matematika yang kompleks menjadi mudah diakses dan menarik. Dengan gelar PhD dalam Fisika Teoretis dan pengalaman mengajar selama hampir satu dekade di tingkat universitas, saya membantu mahasiswa menjembatani kesenjangan antara hafalan dan pemahaman konseptual yang sejati.{'\n\n'}
-            Filosofi mengajar saya berfokus pada "Denyut Belajar"—pendekatan terstruktur yang membangun kepercayaan diri melalui tantangan bertahap dan penerapan dunia nyata dari teori-teori abstrak.
+            {tutor.bio}
           </Text>
         </View>
 
@@ -173,10 +182,10 @@ export default function TutorProfileScreen() {
         <View style={[styles.cardSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.availabilityHeader}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Ketersediaan</Text>
-            <div style={styles.arrowsRow}>
+            <View style={styles.arrowsRow}>
               <TouchableOpacity style={styles.arrowBtn}><Ionicons name="chevron-back" size={16} color={colors.textSecondary} /></TouchableOpacity>
               <TouchableOpacity style={styles.arrowBtn}><Ionicons name="chevron-forward" size={16} color={colors.textSecondary} /></TouchableOpacity>
-            </div>
+            </View>
           </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.datesRow}>
@@ -259,7 +268,6 @@ export default function TutorProfileScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FAFAFC', 
   },
   header: {
     flexDirection: 'row',
@@ -281,7 +289,6 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#1E293B',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,
@@ -289,75 +296,68 @@ const styles = StyleSheet.create({
   headerLogoText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#4F46E5',
   },
   notificationBtn: {
     padding: 8,
   },
   scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 120, // space for bottom fixed button
+    paddingBottom: 100,
   },
   heroCard: {
-    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
     borderRadius: 32,
     padding: 24,
     alignItems: 'center',
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.03,
-    shadowRadius: 10,
-    elevation: 2,
+    marginBottom: 16,
+    borderWidth: 1,
     position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.05,
+    shadowRadius: 15,
+    elevation: 3,
   },
   badgeTopLeft: {
     position: 'absolute',
     top: 20,
-    right: 20,
-    backgroundColor: '#F3E8FF',
+    left: 20,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: 8,
   },
   badgeTopLeftText: {
-    color: '#9333EA',
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '800',
+    letterSpacing: 1,
   },
   avatarWrapper: {
     marginBottom: 16,
-    marginTop: 8,
+    marginTop: 10,
   },
   avatarGradientBorder: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: '#4F46E5', // pseudo gradient ring
+    width: 90,
+    height: 90,
+    borderRadius: 30,
+    padding: 3,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 3,
   },
   avatarInner: {
     width: '100%',
     height: '100%',
-    borderRadius: 40,
-    backgroundColor: '#E5E7EB',
+    borderRadius: 27,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 3,
-    borderColor: '#FFF',
   },
   tutorName: {
     fontSize: 22,
-    fontWeight: '800',
-    color: '#111827',
+    fontWeight: '900',
     marginBottom: 4,
   },
   tutorSubject: {
     fontSize: 14,
-    color: '#4B5563',
-    marginBottom: 12,
+    marginBottom: 16,
+    fontWeight: '500',
   },
   ratingRow: {
     flexDirection: 'row',
@@ -365,58 +365,50 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   starIcon: {
-    marginHorizontal: 1,
+    marginRight: 2,
   },
   ratingScore: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#111827',
+    fontWeight: '800',
     marginLeft: 6,
-    marginRight: 4,
   },
   ratingReviews: {
     fontSize: 12,
-    color: '#6B7280',
+    marginLeft: 4,
   },
   statsRow: {
     flexDirection: 'row',
-    justifyContent: 'center',
     width: '100%',
+    justifyContent: 'space-around',
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
-    paddingTop: 16,
+    paddingTop: 20,
   },
   statBox: {
-    flex: 1,
     alignItems: 'center',
   },
   statLabel: {
     fontSize: 10,
-    color: '#6B7280',
-    fontWeight: '600',
-    marginBottom: 4,
+    color: '#9CA3AF',
+    fontWeight: '700',
     letterSpacing: 0.5,
+    marginBottom: 4,
   },
   statValue: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#4F46E5',
+    fontSize: 15,
+    fontWeight: '800',
   },
   statDivider: {
     width: 1,
-    height: '100%',
-    backgroundColor: '#F3F4F6',
+    height: '80%',
+    alignSelf: 'center',
   },
   cardSection: {
-    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
     borderRadius: 24,
-    padding: 24,
-    marginBottom: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.02,
-    shadowRadius: 8,
-    elevation: 1,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
   },
   sectionTitleRow: {
     flexDirection: 'row',
@@ -428,9 +420,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 12,
+    fontWeight: '800',
   },
   chipsContainer: {
     flexDirection: 'row',
@@ -438,173 +428,143 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   chipItem: {
-    backgroundColor: '#F9FAFB',
-    borderWidth: 1,
-    borderColor: '#F3F4F6',
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 20,
+    borderRadius: 12,
   },
   chipText: {
     fontSize: 12,
-    color: '#4B5563',
-    fontWeight: '500',
+    fontWeight: '700',
   },
   aboutText: {
     fontSize: 14,
-    color: '#4B5563',
     lineHeight: 22,
+    fontWeight: '400',
   },
   availabilityHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   arrowsRow: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 12,
   },
   arrowBtn: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#F3F4F6',
-    justifyContent: 'center',
-    alignItems: 'center',
+    padding: 4,
   },
   datesRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 20,
+    marginBottom: 24,
+    gap: 12,
   },
   dateItem: {
-    width: 52,
+    width: 50,
     height: 64,
     borderRadius: 16,
-    backgroundColor: '#F9FAFB',
     justifyContent: 'center',
     alignItems: 'center',
   },
   dateItemActive: {
-    backgroundColor: '#4F46E5',
-    shadowColor: '#4F46E5',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
     elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
   },
   dateItemDisabled: {
-    opacity: 0.5,
+    opacity: 0.3,
   },
   dayText: {
-    fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '600',
+    fontSize: 10,
+    fontWeight: '700',
     marginBottom: 4,
   },
   dateTextNum: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#111827',
+    fontSize: 15,
+    fontWeight: '800',
   },
   textWhite: {
-    color: '#FFFFFF',
+    color: '#FFF',
   },
   textDisabled: {
-    color: '#D1D5DB',
+    color: '#9CA3AF',
   },
   timeGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 10,
-    justifyContent: 'space-between',
   },
   timeItem: {
-    width: '48%',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 16,
+    width: (width - 32 - 40 - 20) / 3, // account for margins/padding
     paddingVertical: 12,
+    borderRadius: 12,
     alignItems: 'center',
+    borderWidth: 1,
   },
   timeItemActive: {
-    backgroundColor: '#4F46E5',
+    elevation: 2,
   },
   timeText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#4B5563',
-  },
-  linkText: {
-    color: '#4F46E5',
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   lastSection: {
-    marginBottom: 0,
+    marginBottom: 100,
+  },
+  linkText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   reviewCard: {
-    backgroundColor: '#FAFAFC',
-    borderRadius: 20,
-    padding: 16,
-    marginBottom: 12,
-    borderLeftWidth: 3,
-    borderLeftColor: '#7C3AED',
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
   },
   reviewHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   reviewAvatar: {
     width: 32,
     height: 32,
-    borderRadius: 16,
-    backgroundColor: '#1E293B',
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   reviewerInfo: {
     flex: 1,
   },
   reviewerName: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
-    color: '#111827',
   },
   reviewerCourse: {
-    fontSize: 11,
-    color: '#6B7280',
+    fontSize: 10,
   },
   reviewStars: {
     flexDirection: 'row',
+    gap: 1,
   },
   reviewTextVal: {
-    fontSize: 13,
-    color: '#4B5563',
+    fontSize: 12,
+    lineHeight: 18,
     fontStyle: 'italic',
-    lineHeight: 20,
   },
   bottomBar: {
     position: 'absolute',
-    bottom: 80, // Sit above the persistent TabBar
+    bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#FFFFFF',
     paddingHorizontal: 20,
     paddingTop: 16,
-    paddingBottom: 16,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20,
     borderTopWidth: 1,
-    borderTopColor: '#F3F4F6',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
     elevation: 5,
   },
   bookButton: {
-    backgroundColor: '#4F46E5',
     borderRadius: 24,
     paddingVertical: 16,
     alignItems: 'center',
