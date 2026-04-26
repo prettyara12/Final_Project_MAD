@@ -35,7 +35,7 @@ export async function getGeminiResponse(userMessage: string, history: { role: "u
   try {
     // Gunakan model: gemini-2.5-flash (sesuai permintaan user)
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.1-flash-lite-preview",
       systemInstruction: SYSTEM_PROMPT
     });
 
@@ -48,12 +48,12 @@ export async function getGeminiResponse(userMessage: string, history: { role: "u
     return response.text();
   } catch (error: any) {
     console.error("Gemini API Error details:", error);
-    
+
     // Deteksi error limit (quota/token) atau overload (high demand)
     const errorMessage = error?.message || "";
-    const isTemporaryLimit = 
-      errorMessage.includes("429") || 
-      errorMessage.includes("Quota exceeded") || 
+    const isTemporaryLimit =
+      errorMessage.includes("429") ||
+      errorMessage.includes("Quota exceeded") ||
       errorMessage.includes("rate limit") ||
       errorMessage.includes("high demand") ||
       errorMessage.includes("temporary") ||
