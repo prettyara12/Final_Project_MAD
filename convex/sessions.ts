@@ -46,9 +46,61 @@ export const getSessionsByUser = query({
 export const updateSessionStatus = mutation({
   args: {
     id: v.id("sessions"),
-    status: v.union(v.literal("booked"), v.literal("completed"), v.literal("cancelled")),
+    status: v.union(v.literal("pending"), v.literal("booked"), v.literal("completed"), v.literal("cancelled")),
   },
   handler: async (ctx, args) => {
     await ctx.db.patch(args.id, { status: args.status });
+  },
+});
+
+// TUTOR DASHBOARD QUERIES & MUTATIONS
+
+export const getStudentRequests = query({
+  args: { tutorId: v.id("users") },
+  handler: async (ctx, args) => {
+    const requests = await ctx.db
+      .query("sessions")
+      .withIndex("by_tutorId", (q) => q.eq("tutorId", args.tutorId))
+      .filter((q) => q.eq(q.field("status"), "pending"))
+      .collect();
+
+    return Promise.all(
+      requests.map(async (request) => {
+        const learner = await ctx.db.get(request.learnerId);
+        return { ...request, learner };
+      })
+    );
+  },
+});
+
+export const getTutorSessions = query({
+  args: { tutorId: v.id("users") },
+  handler: async (ctx, args) => {
+    const sessions = await ctx.db
+      .query("sessions")
+      .withIndex("by_tutorId", (q) => q.eq("tutorId", args.tutorId))
+      .filter((q) => q.neq(q.field("status"), "pending")) // Fetch booked, completed, etc.
+      .collect();
+
+    return Promise.all(
+      sessions.map(async (session) => {
+        const learner = await ctx.db.get(session.learnerId);
+        return { ...session, learner };
+      })
+    );
+  },
+});
+
+export const acceptRequest = mutation({
+  args: { sessionId: v.id("sessions") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.sessionId, { status: "booked" });
+  },
+});
+
+export const rejectRequest = mutation({
+  args: { sessionId: v.id("sessions") },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.sessionId, { status: "cancelled" });
   },
 });

@@ -47,7 +47,7 @@ export default defineSchema({
     subject: v.string(),
     date: v.string(),
     time: v.string(),
-    status: v.union(v.literal("booked"), v.literal("completed"), v.literal("cancelled")),
+    status: v.union(v.literal("pending"), v.literal("booked"), v.literal("completed"), v.literal("cancelled")),
   })
     .index("by_tutorId", ["tutorId"])
     .index("by_learnerId", ["learnerId"]),
