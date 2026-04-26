@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as chat from "../chat.js";
 import type * as messages from "../messages.js";
 import type * as seed from "../seed.js";
 import type * as sessions from "../sessions.js";
@@ -22,6 +23,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  chat: typeof chat;
   messages: typeof messages;
   seed: typeof seed;
   sessions: typeof sessions;

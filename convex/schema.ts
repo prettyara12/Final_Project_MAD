@@ -11,6 +11,7 @@ export default defineSchema({
     phone: v.optional(v.string()),
     address: v.optional(v.string()),
     year: v.optional(v.string()),
+    profileImage: v.optional(v.string()),
     preferences: v.optional(
       v.object({
         learningStyle: v.optional(v.string()),
@@ -55,8 +56,27 @@ export default defineSchema({
   messages: defineTable({
     // Diubah menjadi v.string() agar mendukung bot "ai_system_bot"
     senderId: v.string(),
-    receiverId: v.string(),
+    receiverId: v.optional(v.string()), // Made optional to support new conversation logic
+    conversationId: v.optional(v.id("conversations")), // Used for Tutor-Student chat
     content: v.string(),
     timestamp: v.number(),
-  }).index("by_conversation", ["senderId", "receiverId"]),
+  }).index("by_conversation", ["senderId", "receiverId"])
+    .index("by_conversationId", ["conversationId"]),
+
+  conversations: defineTable({
+    tutorId: v.string(),
+    studentId: v.string(),
+    createdAt: v.number(),
+  }).index("by_participants", ["tutorId", "studentId"]),
+
+  studentPreferences: defineTable({
+    userId: v.id("users"),
+    subject: v.string(),
+    topic: v.optional(v.string()),
+    learningStyle: v.string(), // Visual, Theory, Practice
+    preferredTime: v.string(), // morning, afternoon, evening
+    difficulty: v.string(), // Beginner, Intermediate, Advanced
+    notes: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"]),
 });

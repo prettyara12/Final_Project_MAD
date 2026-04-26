@@ -13,6 +13,7 @@ import {
   TextInput,
   StatusBar,
   ActivityIndicator,
+  Image
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -24,7 +25,7 @@ import { api } from '../../convex/_generated/api';
 export default function ProfileScreen() {
   const router = useRouter();
   const { isDark, colors, toggleTheme } = useTheme();
-  const { profileData, updateProfile: updateLocalProfile } = useProfile();
+  const { profileData, updateProfile: updateLocalProfile, clearProfile } = useProfile();
   
   // Convex Integration
   const currentUser = useQuery(api.users.getUserByEmail, { email: profileData.email });
@@ -65,9 +66,12 @@ export default function ProfileScreen() {
   const handleLogout = useCallback(() => {
     Alert.alert("Keluar", "Apakah Anda yakin ingin keluar?", [
       { text: "Batal", style: 'cancel' },
-      { text: "Keluar", style: 'destructive', onPress: () => router.push('/OnboardingScreen' as any) }
+      { text: "Keluar", style: 'destructive', onPress: () => {
+        clearProfile();
+        router.push('/OnboardingScreen' as any);
+      } }
     ]);
-  }, [router]);
+  }, [router, clearProfile]);
 
   const handleSavePersonalInfo = async () => {
     if (!currentUser) {
@@ -134,7 +138,11 @@ export default function ProfileScreen() {
            <View style={styles.avatarContainer}>
               <View style={[styles.avatarRing, { borderColor: colors.primaryLighter }]}>
                  <View style={[styles.mainAvatarBox, { backgroundColor: colors.avatarBg }]}>
-                    <Ionicons name="person" size={48} color="#FFF" />
+                    {profileData.profileImage ? (
+                      <Image source={{ uri: profileData.profileImage }} style={styles.avatarImageLarge} />
+                    ) : (
+                      <Ionicons name="person" size={48} color="#FFF" />
+                    )}
                  </View>
               </View>
               <TouchableOpacity style={[styles.editBadge, { backgroundColor: colors.primary }]}>
@@ -167,15 +175,20 @@ export default function ProfileScreen() {
 
         <View style={styles.sectionWrapper}>
            <Text style={[styles.sectionHeaderTitle, { color: colors.text }]}>Beralih Cepat</Text>
-           <View style={[styles.toggleCardGroup, { backgroundColor: colors.background }]}>
+           <View style={[styles.toggleCardGroup, { backgroundColor: colors.surface, borderBottomColor: colors.border, borderWidth: 1 }]}>
               <View style={[styles.toggleRow, { borderBottomWidth: 0 }]}>
                  <TouchableOpacity style={styles.toggleRowLeft} onPress={toggleTheme}>
-                    <View style={[styles.toggleIconBoxAlt, { backgroundColor: isDark ? '#7C3AED' : '#EBE2FF' }]}>
-                       <Ionicons name={isDark ? 'moon' : 'sunny'} size={18} color={isDark ? '#FFF' : '#7C3AED'} />
+                    <View style={[styles.toggleIconBoxAlt, { backgroundColor: isDark ? colors.primary : colors.primaryLight }]}>
+                       <Ionicons name={isDark ? 'moon' : 'sunny'} size={18} color={isDark ? '#FFF' : colors.primary} />
                     </View>
                     <Text style={[styles.toggleLabel, { color: colors.text }]}>Tema {isDark ? 'Gelap' : 'Terang'}</Text>
                  </TouchableOpacity>
-                 <Switch value={isDark} onValueChange={toggleTheme} />
+                 <Switch 
+                   value={isDark} 
+                   onValueChange={toggleTheme}
+                   trackColor={{ false: colors.borderAlt, true: colors.primaryLighter }}
+                   thumbColor={isDark ? colors.primary : colors.surfaceHover}
+                 />
               </View>
            </View>
         </View>
@@ -293,7 +306,8 @@ const styles = StyleSheet.create({
   profileCard: { marginHorizontal: 20, borderRadius: 32, padding: 24, alignItems: 'center', marginBottom: 24, elevation: 3 },
   avatarContainer: { position: 'relative', marginBottom: 16 },
   avatarRing: { padding: 4, borderRadius: 60, borderWidth: 2 },
-  mainAvatarBox: { width: 100, height: 100, borderRadius: 50, justifyContent: 'center', alignItems: 'center' },
+  mainAvatarBox: { width: 100, height: 100, borderRadius: 50, justifyContent: 'center', alignItems: 'center', overflow: 'hidden' },
+  avatarImageLarge: { width: '100%', height: '100%' },
   editBadge: { position: 'absolute', bottom: 4, right: 4, width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#FFF' },
   profileName: { fontSize: 24, fontWeight: '900', marginBottom: 6 },
   rolePill: { paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, marginBottom: 12 },

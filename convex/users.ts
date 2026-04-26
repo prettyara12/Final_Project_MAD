@@ -27,12 +27,15 @@ export const updateUser = mutation({
     name: v.optional(v.string()),
     university: v.optional(v.string()),
     major: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    address: v.optional(v.string()),
     preferences: v.optional(
       v.object({
         learningStyle: v.optional(v.string()),
         availability: v.optional(v.string()),
       })
     ),
+    profileImage: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { id, ...fields } = args;

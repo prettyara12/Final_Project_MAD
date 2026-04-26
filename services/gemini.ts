@@ -33,7 +33,7 @@ export async function getGeminiResponse(userMessage: string, history: { role: "u
   }
 
   try {
-    // Gunakan model: gemini-2.5-flash (sesuai permintaan user)
+    // Gunakan model yang stabil: gemini-1.5-flash-latest
     const model = genAI.getGenerativeModel({
       model: "gemini-3.1-flash-lite-preview",
       systemInstruction: SYSTEM_PROMPT
@@ -67,3 +67,58 @@ export async function getGeminiResponse(userMessage: string, history: { role: "u
     return "Maaf, saya sedang mengalami kendala teknis. Bisa ulangi lagi nanti?";
   }
 }
+
+export async function getTutorRecommendation(studentNeeds: {
+  subject: string;
+  difficulty?: string;
+  learningStyle?: string;
+  preferredTime: string;
+  notes?: string;
+}, tutors: any[]) {
+  if (!API_KEY) return null;
+
+  const prompt = `
+Recommend the best tutors based on the following student needs and available tutor data. 
+
+CRITICAL RULES:
+1. PRIMARY MATCH: The tutor MUST teach "${studentNeeds.subject}". 
+2. EXCLUSION: If a tutor does NOT teach "${studentNeeds.subject}" (look at their Subjects list), DO NOT rank them in the top 5, even if they have a 5.0 rating.
+3. EXPLANATION: Write a brief, persuasive explanation in INDONESIAN. Mention why their expertise in "${studentNeeds.subject}" matches the student's needs.
+4. RANKING: Rank from 1 (best) to 5.
+
+Return ONLY a valid JSON array of objects:
+[
+  {
+    "tutorId": "string (the tutor's _id)",
+    "rank": number,
+    "explanation": "string (explanation in Indonesian)"
+  }
+]
+
+STUDENT NEEDS:
+- Requested Subject: ${studentNeeds.subject}
+- Difficulty: ${studentNeeds.difficulty || 'Menengah'}
+- Learning Style: ${studentNeeds.learningStyle || 'Visual'}
+- Preferred Time: ${studentNeeds.preferredTime}
+- Specific Notes: ${studentNeeds.notes || 'None'}
+
+AVAILABLE TUTOR DATA:
+${tutors.map(t => `- ID: ${t._id}, Name: ${t.user?.name || t.name}, Subjects: ${t.subjects?.join(', ')}, Rating: ${t.rating || 5}, Bio: ${t.bio?.substring(0, 150)}...`).join('\n')}
+`;
+
+  try {
+    const model = genAI.getGenerativeModel({
+      model: "gemini-3.1-flash-lite-preview",
+      generationConfig: { responseMimeType: "application/json" }
+    });
+
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    return JSON.parse(text);
+  } catch (error) {
+    console.error("Gemini Recommendation Error:", error);
+    return null;
+  }
+}
+

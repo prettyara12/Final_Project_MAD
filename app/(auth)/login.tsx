@@ -26,7 +26,7 @@ const { width, height } = Dimensions.get('window');
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { updateProfile } = useProfile();
+  const { updateProfile, clearProfile } = useProfile();
   
   const [activeRole, setActiveRole] = useState<'learner' | 'tutor'>('learner');
   const [email, setEmail] = useState('');
@@ -72,11 +72,17 @@ export default function LoginScreen() {
           }
 
           // Jika user ditemukan di database, update profile context
+          // Reset dulu ke default baru timpa dengan data user baru agar data lama tidak tertinggal
+          clearProfile();
           updateProfile({
             name: user.name,
             email: user.email,
-            university: user.university || '',
-            major: user.major || '',
+            phone: user.phone || '-',
+            address: user.address || '-',
+            university: user.university || '-',
+            major: user.major || '-',
+            year: user.year || '-',
+            profileImage: user.profileImage || undefined,
           });
           
           if (activeRole === 'tutor') {

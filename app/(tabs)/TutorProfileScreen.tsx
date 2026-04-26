@@ -8,7 +8,8 @@ import {
   TouchableOpacity,
   Dimensions,
   Platform,
-  ActivityIndicator
+  ActivityIndicator,
+  Image
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -72,7 +73,7 @@ export default function TutorProfileScreen() {
       params: { 
         tutorId: tutor.user?._id,
         tutorName: tutor.user?.name,
-        subject: tutor.subjects[0]
+        subject: (tutor.subjects && tutor.subjects.length > 0) ? tutor.subjects[0] : 'General'
       }
     } as any);
   };
@@ -127,13 +128,19 @@ export default function TutorProfileScreen() {
           <View style={styles.avatarWrapper}>
             <View style={[styles.avatarGradientBorder, { backgroundColor: colors.primary }]}>
               <View style={[styles.avatarInner, { backgroundColor: colors.avatarBg }]}>
-                <Ionicons name="person" size={40} color="#FFF" />
+                {tutor.user?.profileImage ? (
+                  <Image source={{ uri: tutor.user.profileImage }} style={styles.avatarImgLarge} />
+                ) : (
+                  <Ionicons name="person" size={40} color="#FFF" />
+                )}
               </View>
             </View>
           </View>
 
-          <Text style={[styles.tutorName, { color: colors.text }]}>{tutor.user?.name}</Text>
-          <Text style={[styles.tutorSubject, { color: colors.textSecondary }]}>{tutor.subjects.join(' & ')}</Text>
+          <Text style={[styles.tutorName, { color: colors.text }]}>{tutor.user?.name || 'Tutor'}</Text>
+          <Text style={[styles.tutorSubject, { color: colors.textSecondary }]}>
+            {tutor.subjects && Array.isArray(tutor.subjects) ? tutor.subjects.join(' & ') : 'General'}
+          </Text>
 
           <View style={styles.ratingRow}>
             {renderStars(Math.round(tutor.rating))}
@@ -162,11 +169,11 @@ export default function TutorProfileScreen() {
           </View>
           
           <View style={styles.chipsContainer}>
-            {tutor.subjects.map((sub, idx) => (
+            {tutor.subjects && Array.isArray(tutor.subjects) ? tutor.subjects.map((sub, idx) => (
               <View key={idx} style={[styles.chipItem, { backgroundColor: colors.border }]}>
                 <Text style={[styles.chipText, { color: colors.textSecondary }]}>{sub}</Text>
               </View>
-            ))}
+            )) : <Text style={{color: colors.textMuted}}>Tidak ada subjek spesifik.</Text>}
           </View>
         </View>
 
@@ -348,6 +355,11 @@ const styles = StyleSheet.create({
     borderRadius: 27,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  avatarImgLarge: {
+    width: '100%',
+    height: '100%',
   },
   tutorName: {
     fontSize: 22,

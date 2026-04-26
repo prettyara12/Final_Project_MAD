@@ -8,6 +8,7 @@ export interface ProfileData {
   university: string;
   major: string;
   year: string;
+  profileImage?: string;
 }
 
 const DEFAULT_PROFILE: ProfileData = {
@@ -24,12 +25,14 @@ interface ProfileContextType {
   profileData: ProfileData;
   updateProfile: (data: Partial<ProfileData>) => void;
   setProfileData: React.Dispatch<React.SetStateAction<ProfileData>>;
+  clearProfile: () => void;
 }
 
 const ProfileContext = createContext<ProfileContextType>({
   profileData: DEFAULT_PROFILE,
   updateProfile: () => {},
   setProfileData: () => {},
+  clearProfile: () => {},
 });
 
 export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -39,8 +42,12 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setProfileData(prev => ({ ...prev, ...data }));
   }, []);
 
+  const clearProfile = useCallback(() => {
+    setProfileData(DEFAULT_PROFILE);
+  }, []);
+
   return (
-    <ProfileContext.Provider value={{ profileData, updateProfile, setProfileData }}>
+    <ProfileContext.Provider value={{ profileData, updateProfile, setProfileData, clearProfile }}>
       {children}
     </ProfileContext.Provider>
   );

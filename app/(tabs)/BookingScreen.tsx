@@ -154,7 +154,6 @@ export default function BookingScreen() {
                   key={idx}
                   style={[
                     styles.dateBox, 
-                    isActive && styles.dateBoxActive,
                     { backgroundColor: isActive ? colors.primary : 'transparent' }
                   ]}
                   onPress={() => {
@@ -164,8 +163,6 @@ export default function BookingScreen() {
                 >
                   <Text style={[
                       styles.dateNum, 
-                      item.inactive && styles.dateNumInactive,
-                      isActive && styles.dateNumActive,
                       { color: isActive ? '#FFF' : (item.inactive ? colors.border : colors.text) }
                   ]}>
                     {item.date}
@@ -191,9 +188,8 @@ export default function BookingScreen() {
                   key={idx}
                   style={[
                     styles.slotBtn, 
-                    isSelected && styles.slotBtnActive,
-                    slot.full && styles.slotBtnFull,
-                    { backgroundColor: isSelected ? colors.primary : colors.card, borderColor: colors.border }
+                    { backgroundColor: isSelected ? colors.primary : colors.surface, borderColor: colors.border, borderWidth: 1 },
+                    slot.full && { opacity: 0.6 }
                   ]}
                   onPress={() => {
                     if(slot.available) setSelectedTime(slot.time);
@@ -202,17 +198,15 @@ export default function BookingScreen() {
                 >
                   <Text style={[
                     styles.slotText,
-                    isSelected && styles.slotTextActive,
-                    slot.full && styles.slotTextFull,
-                    { color: isSelected ? '#FFF' : (slot.full ? colors.border : colors.text) }
+                    { color: isSelected ? '#FFF' : (slot.full ? colors.textMuted : colors.text) }
                   ]}>
                     {slot.time}
                   </Text>
 
                   {/* Right side Elements */}
                   {slot.tag && (
-                    <View style={styles.slotTag}>
-                      <Text style={styles.slotTagText}>{slot.tag}</Text>
+                    <View style={[styles.slotTag, { backgroundColor: colors.primaryLight }]}>
+                      <Text style={[styles.slotTagText, { color: colors.primary }]}>{slot.tag}</Text>
                     </View>
                   )}
                   {isSelected && (

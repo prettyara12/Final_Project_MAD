@@ -12,7 +12,7 @@ export const bookSession = mutation({
   handler: async (ctx, args) => {
     return await ctx.db.insert("sessions", {
       ...args,
-      status: "booked",
+      status: "pending",
     });
   },
 });
@@ -94,7 +94,33 @@ export const getTutorSessions = query({
 export const acceptRequest = mutation({
   args: { sessionId: v.id("sessions") },
   handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) throw new Error("Session not found");
+
     await ctx.db.patch(args.sessionId, { status: "booked" });
+
+    // Check if conversation already exists between these users
+    const existingAsTutor = await ctx.db
+      .query("conversations")
+      .withIndex("by_participants", (q) => q.eq("tutorId", session.tutorId).eq("studentId", session.learnerId))
+      .first();
+
+    const existingAsStudent = await ctx.db
+      .query("conversations")
+      .withIndex("by_participants", (q) => q.eq("tutorId", session.learnerId).eq("studentId", session.tutorId))
+      .first();
+
+    let conversationId = existingAsTutor?._id || existingAsStudent?._id;
+
+    if (!conversationId) {
+      conversationId = await ctx.db.insert("conversations", {
+        tutorId: session.tutorId,
+        studentId: session.learnerId,
+        createdAt: Date.now(),
+      });
+    }
+
+    return conversationId;
   },
 });
 

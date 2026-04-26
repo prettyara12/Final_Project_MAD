@@ -67,6 +67,14 @@ export default function TabsLayout() {
         name="TutorProfileScreen"
         options={{ href: null }}
       />
+      <Tabs.Screen
+        name="AIPreferenceScreen"
+        options={{ href: null }}
+      />
+      <Tabs.Screen
+        name="AIResultScreen"
+        options={{ href: null }}
+      />
     </Tabs>
   );
 }

@@ -6,6 +6,7 @@ interface RequestCardProps {
   subject: string;
   time: string;
   studentName: string;
+  message?: string;
   onAccept: () => void;
   onReject: () => void;
   isAccepting?: boolean;
@@ -16,6 +17,7 @@ export const RequestCard: React.FC<RequestCardProps> = ({
   subject,
   time,
   studentName,
+  message,
   onAccept,
   onReject,
   isAccepting = false,
@@ -23,31 +25,31 @@ export const RequestCard: React.FC<RequestCardProps> = ({
 }) => {
   return (
     <View style={styles.card}>
-       <View style={styles.header}>
-         <View style={styles.iconBox}>
-            <Ionicons name="person-add" size={20} color="#4F46E5" />
-         </View>
-         <View style={styles.info}>
-            <Text style={styles.studentName}>{studentName}</Text>
-            <Text style={styles.subjectText}>{subject}</Text>
-            <Text style={styles.timeText}>{time}</Text>
-         </View>
+       <View style={styles.iconBox}>
+          <Ionicons name="person-outline" size={24} color="#4F46E5" />
+       </View>
+       
+       <View style={styles.info}>
+          <Text style={styles.studentName} numberOfLines={1}>{studentName}</Text>
+          <Text style={styles.subjectText} numberOfLines={1}>{subject}</Text>
+          <Text style={styles.timeText} numberOfLines={1}>{time}</Text>
+          {message ? <Text style={styles.messageText} numberOfLines={1}>{message}</Text> : null}
        </View>
        
        <View style={styles.actions}>
-          <TouchableOpacity 
-            style={[styles.btn, styles.rejectBtn]} 
-            onPress={onReject}
-            disabled={isRejecting || isAccepting}
-          >
-            {isRejecting ? <ActivityIndicator size="small" color="#EF4444" /> : <Text style={styles.rejectBtnText}>Tolak</Text>}
-          </TouchableOpacity>
           <TouchableOpacity 
             style={[styles.btn, styles.acceptBtn]} 
             onPress={onAccept}
             disabled={isRejecting || isAccepting}
           >
-            {isAccepting ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Text style={styles.acceptBtnText}>Terima</Text>}
+            {isAccepting ? <ActivityIndicator size="small" color="#FFFFFF" /> : <Ionicons name="checkmark" size={18} color="#FFFFFF" />}
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.btn, styles.rejectBtn]} 
+            onPress={onReject}
+            disabled={isRejecting || isAccepting}
+          >
+            {isRejecting ? <ActivityIndicator size="small" color="#EF4444" /> : <Ionicons name="close" size={18} color="#EF4444" />}
           </TouchableOpacity>
        </View>
     </View>
@@ -60,6 +62,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     padding: 16,
     marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
     shadowColor: '#4F46E5',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
@@ -68,22 +72,19 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#EEF2FF',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
   iconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: '#EEF2FF',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 16,
   },
   info: {
     flex: 1,
+    marginRight: 12,
+    justifyContent: 'center',
   },
   studentName: {
     fontSize: 15,
@@ -94,38 +95,36 @@ const styles = StyleSheet.create({
   subjectText: {
     fontSize: 13,
     color: '#4F46E5',
-    fontWeight: '600',
+    fontWeight: '700',
     marginBottom: 2,
   },
   timeText: {
     fontSize: 12,
     color: '#6B7280',
+    marginBottom: 2,
+  },
+  messageText: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    fontStyle: 'italic',
   },
   actions: {
-    flexDirection: 'row',
-    gap: 12,
+    flexDirection: 'column',
+    gap: 8,
   },
   btn: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  rejectBtn: {
-    backgroundColor: '#FEF2F2',
-  },
-  rejectBtnText: {
-    color: '#EF4444',
-    fontWeight: '700',
-    fontSize: 13,
-  },
   acceptBtn: {
-    backgroundColor: '#4F46E5',
+    backgroundColor: '#10B981', // green primary
   },
-  acceptBtnText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 13,
+  rejectBtn: {
+    backgroundColor: '#FEF2F2', // light red
+    borderWidth: 1,
+    borderColor: '#FEE2E2',
   }
 });

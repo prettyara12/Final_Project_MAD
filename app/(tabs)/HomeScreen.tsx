@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
@@ -9,7 +9,8 @@ import {
   TouchableOpacity,
   Dimensions,
   Platform,
-  ActivityIndicator
+  ActivityIndicator,
+  Image
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -17,6 +18,7 @@ import { useProfile } from '../../context/ProfileContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
+import { getTutorRecommendation } from '../../services/gemini';
 
 const { width } = Dimensions.get('window');
 
@@ -28,19 +30,58 @@ export default function HomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Convex Integration
-  const currentUser = useQuery(api.users.getUserByEmail, { email: profileData.email });
+  const currentUser = useQuery(api.users.getUserByEmail, profileData?.email ? { email: profileData.email } : "skip");
   const tutors = useQuery(api.tutors.getTutors);
   const popularSubjects = useQuery(api.subjects.getPopularSubjects);
   
-  // Hanya jalankan query sessions jika currentUser ditemukan
+  // Hanya jalankan query sessions jika currentUser ditemukan dan memiliki role
   const sessions = useQuery(api.sessions.getSessionsByUser, 
-    currentUser ? { userId: currentUser._id, role: currentUser.role } : "skip"
+    (currentUser && currentUser.role) ? { userId: currentUser._id, role: currentUser.role as "tutor" | "learner" } : "skip"
   );
 
-  const filteredTutors = tutors?.filter(tutor => 
-    tutor.user?.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    tutor.subjects.some(s => s.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  // AI Recommendation Integration
+  const recommendedTutors = useQuery(api.tutors.getRecommendedTutors, {
+    subject: searchQuery || "Matematika", // Use search or default
+    preferredTime: "08:00", // Default preferred time
+    learningStyle: "Visual", // Default learning style
+  });
+
+  const [aiInsights, setAiInsights] = useState<any[] | null>(null);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+
+  useEffect(() => {
+    if (recommendedTutors && recommendedTutors.length > 0 && !isAiLoading) {
+      const fetchAI = async () => {
+        setIsAiLoading(true);
+        try {
+          const recommendations = await getTutorRecommendation({
+            subject: searchQuery || "Matematika",
+            preferredTime: "08:00",
+            learningStyle: "Visual"
+          }, recommendedTutors);
+          if (recommendations) setAiInsights(recommendations);
+        } catch (e) {
+          console.error("AI Insight Error:", e);
+        } finally {
+          setIsAiLoading(false);
+        }
+      };
+      fetchAI();
+    }
+  }, [recommendedTutors, searchQuery]);
+
+  const getInsightForTutor = (tutorId: string) => {
+    return aiInsights?.find(insight => insight.tutorId === tutorId);
+  };
+
+  const filteredTutors = tutors?.filter(tutor => {
+    const nameStr = tutor.user?.name || tutor.name || '';
+    const nameMatch = nameStr.toLowerCase().includes(searchQuery.toLowerCase());
+    const subjectMatch = (tutor.subjects && Array.isArray(tutor.subjects)) 
+      ? tutor.subjects.some(s => s.toLowerCase().includes(searchQuery.toLowerCase())) 
+      : false;
+    return nameMatch || subjectMatch;
+  });
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
@@ -63,40 +104,57 @@ export default function HomeScreen() {
         
         {/* Greeting Section */}
         <View style={styles.greetingSection}>
-          <Text style={[styles.greetingText, { color: colors.text }]}>Hai, {profileData.name.split(' ')[0]}!</Text>
-          <Text style={styles.greetingSubtext}>
+          <Text style={[styles.greetingText, { color: colors.text }]}>Hai, {(profileData?.name || 'Siswa').split(' ')[0]}!</Text>
+          <Text style={[styles.greetingSubtext, { color: colors.textSecondary }]}>
             Siap menguasai keahlian baru hari ini? Biarkan AI memandu perjalanan belajarmu.
           </Text>
           
           {/* Search Bar */}
-          <View style={styles.searchBarContainer}>
-            <Ionicons name="search" size={20} color="#9CA3AF" style={styles.searchIcon} />
+          <View style={[styles.searchBarContainer, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}>
+            <Ionicons name="search" size={20} color={colors.textMuted} style={styles.searchIcon} />
             <TextInput 
-              style={styles.searchInput}
+              style={[styles.searchInput, { color: colors.text }]}
               placeholder="Cari mata kuliah atau tutor..."
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={colors.textMuted}
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
-            <TouchableOpacity style={styles.searchButton}>
+            <TouchableOpacity style={[styles.searchButton, { backgroundColor: colors.primary }]}>
               <Text style={styles.searchButtonText}>Cari</Text>
             </TouchableOpacity>
           </View>
+
+          {/* AI Search Entry Point */}
+          <TouchableOpacity 
+            style={[styles.aiSearchBtn, { backgroundColor: colors.primaryLight, borderColor: colors.primary }]}
+            onPress={() => router.push('/AIPreferenceScreen' as any)}
+          >
+            <View style={styles.aiSearchBtnLeft}>
+              <View style={[styles.aiSearchIconBox, { backgroundColor: colors.primary }]}>
+                <Ionicons name="sparkles" size={20} color="#FFF" />
+              </View>
+              <View>
+                <Text style={[styles.aiSearchBtnTitle, { color: colors.text }]}>Find Tutor with AI</Text>
+                <Text style={[styles.aiSearchBtnSub, { color: colors.textSecondary }]}>Personalisasi pencarianmu sekarang</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.primary} />
+          </TouchableOpacity>
         </View>
 
         {/* AI Recommended Tutors */}
         <View style={styles.sectionContainer}>
           <View style={styles.sectionHeader}>
             <View>
-              <Text style={styles.sectionTitle}>Tutor Rekomendasi AI</Text>
-              <Text style={styles.sectionSubtitle}>Dipilih berdasarkan riwayat belajarmu</Text>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Tutor Rekomendasi AI</Text>
+              <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>Dipilih berdasarkan riwayat belajarmu</Text>
             </View>
             <TouchableOpacity onPress={() => router.push('/TutorListScreen' as any)}>
-              <Text style={styles.linkText}>Lihat Semua</Text>
+              <Text style={[styles.linkText, { color: colors.primary }]}>Lihat Semua</Text>
             </TouchableOpacity>
           </View>
 
-          {tutors === undefined ? (
+          {recommendedTutors === undefined ? (
             <ActivityIndicator size="small" color={colors.primary} />
           ) : (
             <ScrollView 
@@ -104,40 +162,66 @@ export default function HomeScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.horizontalScrollContent}
             >
-              {(filteredTutors && filteredTutors.length > 0) ? (
-                filteredTutors.map((tutor) => (
+              {Array.isArray(recommendedTutors) && recommendedTutors.length > 0 ? (
+                recommendedTutors.map((tutor, index) => (
                   <TouchableOpacity 
-                    key={tutor._id} 
-                    style={styles.tutorCard}
-                    onPress={() => router.push({ pathname: '/TutorProfileScreen', params: { id: tutor._id } } as any)}
+                    key={tutor?._id} 
+                    style={[
+                      styles.tutorCard, 
+                      { backgroundColor: colors.surface, borderBottomColor: colors.border },
+                      index < 3 && { borderColor: colors.primary, borderWidth: 1 } // Highlight top 3
+                    ]}
+                    onPress={() => tutor?._id && router.push({ pathname: '/TutorProfileScreen', params: { id: tutor._id } } as any)}
                   >
                     <View style={styles.tutorCardHeader}>
-                      <View style={styles.tutorAvatarContainer}>
-                        <Ionicons name="person" size={24} color="#FFF" />
-                        <View style={styles.onlineDot} />
+                      <View style={[styles.tutorAvatarContainer, { backgroundColor: colors.avatarBg }]}>
+                        {tutor?.user?.profileImage ? (
+                          <Image source={{ uri: tutor?.user?.profileImage }} style={styles.tutorAvatarImage} />
+                        ) : (
+                          <Ionicons name="person" size={24} color="#FFF" />
+                        )}
+                        <View style={[styles.onlineDot, { borderColor: colors.surface }]} />
                       </View>
-                      <View style={styles.matchBadge}>
-                        <Ionicons name="sparkles" size={12} color="#7C3AED" />
-                        <Text style={styles.matchText}>COCOK 98%</Text>
+                      <View style={[styles.matchBadge, index < 3 ? { backgroundColor: colors.primary } : { backgroundColor: colors.primaryLight }]}>
+                        <Ionicons name="sparkles" size={12} color={index < 3 ? "#FFF" : colors.primary} />
+                        <Text style={[styles.matchText, { color: index < 3 ? "#FFF" : colors.primary }]}>
+                          {index === 0 ? "AI TOP PICK" : `MATCH ${Math.max(15, Math.min(99, Number(tutor?.score) || 0))}%`}
+                        </Text>
                       </View>
                     </View>
 
-                    <Text style={styles.tutorName}>{tutor.user?.name || tutor.name}</Text>
-                    <Text style={styles.tutorSubjects}>
-                      {tutor.subjects ? tutor.subjects.join(' & ') : tutor.specialization}
-                    </Text>                    
-                    <View style={styles.tutorCardFooter}>
+                    <Text style={[styles.tutorName, { color: colors.text }]}>{tutor?.user?.name || tutor?.name || 'Tutor'}</Text>
+                    <Text style={[styles.tutorSubjects, { color: colors.textSecondary }]} numberOfLines={1}>
+                      {tutor?.subjects && Array.isArray(tutor.subjects) ? tutor.subjects.join(', ') : (tutor?.specialization || 'Umum')}
+                    </Text>
+
+                    {/* AI Explanation */}
+                    <View style={[styles.aiExplanationBox, { backgroundColor: colors.surfaceHover }]}>
+                      <Ionicons name="bulb-outline" size={14} color={colors.primary} />
+                      <Text style={[styles.aiExplanationText, { color: colors.textSecondary }]} numberOfLines={2}>
+                        {tutor?._id ? (getInsightForTutor(tutor._id)?.explanation || "AI sedang menganalisis kecocokan terbaik untukmu...") : "Memuat analisis..."}
+                      </Text>
+                    </View>
+
+                    <View style={[styles.tutorCardFooter, { borderTopColor: colors.border }]}>
                       <View style={styles.ratingRow}>
-                        <Ionicons name="star" size={14} color="#E11D48" />
-                        <Text style={styles.ratingText}>{tutor.rating.toFixed(1)}</Text>
-                        <Text style={styles.reviewsText}>(48 ulasan)</Text>
+                        <Ionicons name="star" size={14} color="#F59E0B" />
+                        <Text style={[styles.ratingText, { color: colors.text }]}>{Number(tutor?.rating || 5).toFixed(1)}</Text>
+                        <Text style={[styles.reviewsText, { color: colors.textMuted }]}>{`(${(tutor as any)?.experience || '8'}th Exp)`}</Text>
                       </View>
-                      <Text style={styles.rateText}>$45/jam</Text>
+                      <TouchableOpacity 
+                        style={[styles.bookBtnSmall, { backgroundColor: colors.primary }]}
+                        onPress={() => tutor?._id && router.push({ pathname: '/BookingScreen', params: { tutorId: tutor._id } } as any)}
+                      >
+                        <Text style={styles.bookBtnTextSmall}>Pesan</Text>
+                      </TouchableOpacity>
                     </View>
                   </TouchableOpacity>
                 ))
               ) : (
-                <Text style={styles.emptySessionText}>Belum ada tutor tersedia.</Text>
+                <View style={styles.emptyContainer}>
+                  <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Tidak ada rekomendasi saat ini.</Text>
+                </View>
               )}
             </ScrollView>
           )}
@@ -145,8 +229,8 @@ export default function HomeScreen() {
 
         {/* Popular Subjects */}
         <View style={styles.sectionContainer}>
-          <View style={styles.popularSubjectsBox}>
-            <Text style={styles.sectionTitle}>Mata Kuliah Populer</Text>
+          <View style={[styles.popularSubjectsBox, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Mata Kuliah Populer</Text>
             
             {popularSubjects === undefined ? (
               <ActivityIndicator size="small" color={colors.primary} />
@@ -158,10 +242,10 @@ export default function HomeScreen() {
                     style={styles.subjectCard}
                     onPress={() => router.push({ pathname: '/SubjectDetailScreen', params: { id: sub._id } } as any)}
                   >
-                    <View style={[styles.subjectIconWrap, { backgroundColor: '#EBE2FF' }]}>
-                      <Ionicons name="book-outline" size={24} color="#7C3AED" />
+                    <View style={[styles.subjectIconWrap, { backgroundColor: colors.primaryLight }]}>
+                      <Ionicons name="book-outline" size={24} color={colors.primary} />
                     </View>
-                    <Text style={styles.subjectName}>{sub.name || sub.title}</Text>
+                    <Text style={[styles.subjectName, { color: colors.textSecondary }]}>{sub.name || sub.title}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -172,9 +256,9 @@ export default function HomeScreen() {
         {/* Upcoming Sessions */}
         <View style={styles.sectionContainer}>
           <View style={[styles.sectionHeader, { marginBottom: 16 }]}>
-            <Text style={styles.sectionTitle}>Sesi Mendatang</Text>
-            <View style={styles.badgeLightPurple}>
-              <Text style={styles.badgeLightPurpleText}>{sessions?.length || 0} TOTAL</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Sesi Mendatang</Text>
+            <View style={[styles.badgeLightPurple, { backgroundColor: colors.primaryLight }]}>
+              <Text style={[styles.badgeLightPurpleText, { color: colors.primary }]}>{sessions?.length || 0} TOTAL</Text>
             </View>
           </View>
 
@@ -182,18 +266,18 @@ export default function HomeScreen() {
               Kita tampilkan state kosong daripada spinner terus-menerus. */}
           {sessions && sessions.length > 0 ? (
             sessions.slice(0, 2).map((session) => (
-              <View key={session._id} style={[styles.sessionCard, { borderLeftColor: '#4F46E5' }]}>
-                <View style={styles.sessionDateCircle}>
-                  <Text style={styles.sessionDateText}>{session.date.split(' ')[0]}</Text>
+              <View key={session._id} style={[styles.sessionCard, { borderLeftColor: colors.primary, backgroundColor: colors.surface }]}>
+                <View style={[styles.sessionDateCircle, { backgroundColor: colors.background }]}>
+                  <Text style={[styles.sessionDateText, { color: colors.text }]}>{session.date.split(' ')[0]}</Text>
                 </View>
                 
                 <View style={styles.sessionDetails}>
-                  <Text style={styles.sessionTitle}>{session.subject}</Text>
-                  <Text style={styles.sessionTimeInfo}>{session.time} • {session.tutor?.name}</Text>
+                  <Text style={[styles.sessionTitle, { color: colors.text }]}>{session.subject}</Text>
+                  <Text style={[styles.sessionTimeInfo, { color: colors.textSecondary }]}>{session.time} • {session.tutor?.name}</Text>
                 </View>
 
-                <TouchableOpacity style={styles.sessionGoBtn} onPress={() => router.push('/ProgressScreen' as any)}>
-                  <Ionicons name="arrow-forward" size={16} color="#4F46E5" />
+                <TouchableOpacity style={[styles.sessionGoBtn, { backgroundColor: colors.primaryLight }]} onPress={() => router.push('/chat/ChatListScreen' as any)}>
+                  <Ionicons name="chatbubbles" size={16} color={colors.primary} />
                 </TouchableOpacity>
               </View>
             ))
@@ -426,6 +510,35 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#4F46E5',
   },
+  bookBtnSmall: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  bookBtnTextSmall: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  tutorAvatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 16,
+  },
+  aiExplanationBox: {
+    flexDirection: 'row',
+    padding: 10,
+    borderRadius: 12,
+    marginBottom: 16,
+    gap: 8,
+    alignItems: 'center',
+  },
+  aiExplanationText: {
+    fontSize: 11,
+    fontStyle: 'italic',
+    lineHeight: 16,
+    flex: 1,
+  },
   popularSubjectsBox: {
     backgroundColor: '#FFFFFF',
     marginHorizontal: 20,
@@ -583,5 +696,46 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#D8B4FE',
     lineHeight: 18,
+  },
+  emptyContainer: {
+    paddingVertical: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: width * 0.7,
+  },
+  emptyText: {
+    fontSize: 13,
+    fontStyle: 'italic',
+    textAlign: 'center',
+  },
+  aiSearchBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderRadius: 24,
+    marginTop: 20,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+  },
+  aiSearchBtnLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  aiSearchIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  aiSearchBtnTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  aiSearchBtnSub: {
+    fontSize: 11,
+    fontWeight: '500',
   },
 });

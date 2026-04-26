@@ -1,6 +1,7 @@
 import { Stack } from "expo-router";
 import { ThemeProvider } from "../context/ThemeContext";
 import { ProfileProvider } from "../context/ProfileContext";
+import { TutorSettingsProvider } from "../context/TutorSettingsContext";
 import { ConvexProvider, ConvexReactClient } from "convex/react";
 
 const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
@@ -17,7 +18,9 @@ export default function RootLayout() {
     <ConvexProvider client={convex}>
       <ThemeProvider>
         <ProfileProvider>
-          <Stack screenOptions={{ headerShown: false }} />
+          <TutorSettingsProvider>
+            <Stack screenOptions={{ headerShown: false }} />
+          </TutorSettingsProvider>
         </ProfileProvider>
       </ThemeProvider>
     </ConvexProvider>

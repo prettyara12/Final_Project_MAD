@@ -25,9 +25,9 @@ export const SessionCard: React.FC<SessionCardProps> = ({
           <Text style={styles.sessionTime}>{time}</Text>
           <Text style={styles.sessionTutor}>Tutor: {tutor}</Text>
        </View>
-       <View style={styles.joinBtn}>
-          <Text style={styles.joinBtnText}>Gabung</Text>
-       </View>
+       <TouchableOpacity style={styles.joinBtn} onPress={() => require('expo-router').router.push('/chat/ChatListScreen')}>
+          <Text style={styles.joinBtnText}>Chat</Text>
+       </TouchableOpacity>
     </TouchableOpacity>
   );
 };
