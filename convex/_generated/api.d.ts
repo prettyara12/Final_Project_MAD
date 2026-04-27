@@ -9,7 +9,9 @@
  */
 
 import type * as chat from "../chat.js";
+import type * as groups from "../groups.js";
 import type * as messages from "../messages.js";
+import type * as notifications from "../notifications.js";
 import type * as seed from "../seed.js";
 import type * as sessions from "../sessions.js";
 import type * as subjects from "../subjects.js";
@@ -24,7 +26,9 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   chat: typeof chat;
+  groups: typeof groups;
   messages: typeof messages;
+  notifications: typeof notifications;
   seed: typeof seed;
   sessions: typeof sessions;
   subjects: typeof subjects;

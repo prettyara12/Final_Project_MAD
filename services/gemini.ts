@@ -35,15 +35,39 @@ export async function getGeminiResponse(userMessage: string, history: { role: "u
   try {
     // Gunakan model yang stabil: gemini-1.5-flash-latest
     const model = genAI.getGenerativeModel({
-      model: "gemini-3.1-flash-lite-preview",
-      systemInstruction: SYSTEM_PROMPT
+      model: "gemma-3-27b-it"
     });
 
-    const chat = model.startChat({
-      history: history,
+    let validHistory: any[] = [];
+    let expectedRole = "user";
+
+    for (const msg of history) {
+      if (msg.role === expectedRole) {
+        validHistory.push({ role: msg.role, parts: msg.parts });
+        expectedRole = expectedRole === "user" ? "model" : "user";
+      }
+    }
+
+    if (validHistory.length > 0 && validHistory[validHistory.length - 1].role === "user") {
+      validHistory.pop();
+    }
+
+    const contents = [...validHistory, { role: "user", parts: [{ text: userMessage }] }];
+
+    // Inject system instruction into the first user message manually
+    if (contents.length > 0 && contents[0].role === "user") {
+      contents[0].parts[0].text = `System Instruction:\n${SYSTEM_PROMPT}\n\nUser Request:\n${contents[0].parts[0].text}`;
+    }
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error("Request Timeout")), 15000);
     });
 
-    const result = await chat.sendMessage(userMessage);
+    const result = await Promise.race([
+      model.generateContent({ contents }),
+      timeoutPromise
+    ]);
+
     const response = await result.response;
     return response.text();
   } catch (error: any) {
@@ -108,13 +132,20 @@ ${tutors.map(t => `- ID: ${t._id}, Name: ${t.user?.name || t.name}, Subjects: ${
 
   try {
     const model = genAI.getGenerativeModel({
-      model: "gemini-3.1-flash-lite-preview",
-      generationConfig: { responseMimeType: "application/json" }
+      model: "gemma-3-27b-it"
     });
 
-    const result = await model.generateContent(prompt);
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error("Request Timeout")), 15000);
+    });
+
+    const result = await Promise.race([
+      model.generateContent(prompt),
+      timeoutPromise
+    ]);
     const response = await result.response;
-    const text = response.text();
+    let text = response.text();
+    text = text.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
     return JSON.parse(text);
   } catch (error) {
     console.error("Gemini Recommendation Error:", error);

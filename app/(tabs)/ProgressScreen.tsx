@@ -8,7 +8,8 @@ import {
   TouchableOpacity,
   Dimensions,
   Platform,
-  ActivityIndicator
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -26,26 +27,53 @@ const BADGES = [
   { id: '4', title: 'Mentor', desc: 'Bantu 10 teman', bg: '#F3F4F6', icon: 'people', iconColor: '#D1D5DB', earned: false },
 ];
 
-const CHART_DATA = [
-  { day: 'SEN', height: 40 },
-  { day: 'SEL', height: 60 },
-  { day: 'RAB', height: 50 },
-  { day: 'KAM', height: 100, active: true },
-  { day: 'JUM', height: 75 },
-  { day: 'SAB', height: 45 },
-  { day: 'MIN', height: 20 },
-];
+
 
 export default function ProgressScreen() {
   const router = useRouter();
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
   const { profileData } = useProfile();
 
   // Convex Integration
   const currentUser = useQuery(api.users.getUserByEmail, { email: profileData.email });
   const sessions = useQuery(api.sessions.getSessionsByUser, 
-    currentUser ? { userId: currentUser._id, role: currentUser.role } : "skip"
+    currentUser ? { userId: currentUser._id, role: currentUser.role as "tutor" | "learner" } : "skip"
   );
+  const learningPulse = useQuery(api.users.getLearningPulse, 
+    currentUser ? { userId: currentUser._id } : "skip"
+  );
+
+  const [activeTab, setActiveTab] = React.useState('Minggu');
+
+  // Hitung data chart berdasarkan sesi riil
+  const getWeeklyChartData = () => {
+    const days = ['MIN', 'SEN', 'SEL', 'RAB', 'KAM', 'JUM', 'SAB'];
+    const counts = [0, 0, 0, 0, 0, 0, 0];
+    
+    if (sessions) {
+      sessions.forEach(s => {
+        const date = new Date(s.date);
+        counts[date.getDay()] += 1;
+      });
+    }
+
+    const maxCount = Math.max(...counts, 1);
+    const today = new Date().getDay();
+
+    // Reorder to start from SEN
+    const orderedDays = ['SEN', 'SEL', 'RAB', 'KAM', 'JUM', 'SAB', 'MIN'];
+    const orderedIndices = [1, 2, 3, 4, 5, 6, 0];
+
+    return orderedIndices.map((dayIdx, i) => ({
+      day: orderedDays[i],
+      height: (counts[dayIdx] / maxCount) * 100,
+      active: dayIdx === today,
+      count: counts[dayIdx]
+    }));
+  };
+
+  const chartData = getWeeklyChartData();
+  const earnedBadges = BADGES.filter(b => b.earned);
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
@@ -72,24 +100,31 @@ export default function ProgressScreen() {
         <View style={styles.titleSection}>
           <Text style={[styles.mainTitle, { color: colors.text }]}>Perjalanan Belajarku</Text>
           <Text style={[styles.mainDesc, { color: colors.textSecondary }]}>
-            Kamu berada di 5% pelajar teratas minggu ini. Pertahankan momentumnya!
+            {learningPulse && learningPulse.completed > 0 
+              ? "Kamu berada di 5% pelajar teratas minggu ini. Pertahankan momentumnya!" 
+              : "Siap memulai petualangan belajarmu? Selesaikan sesi pertama untuk melihat statistik di sini!"}
           </Text>
         </View>
 
         {/* Collaborative Mode Banner */}
-        <View style={styles.collabBanner}>
+        <TouchableOpacity 
+          style={styles.collabBanner}
+          onPress={() => Alert.alert("Mode Kolaboratif", "Fitur ini memungkinkan kamu belajar bersama teman. Segera hadir!")}
+        >
            <View style={styles.avatarsOverlapBox}>
-              <View style={[styles.overlapAvatar, { zIndex: 3, backgroundColor: '#0F172A' }]}><Ionicons name="person" size={12} color="#FFF" /></View>
-              <View style={[styles.overlapAvatar, { zIndex: 2, backgroundColor: '#065F46', left: -10 }]}><Ionicons name="person" size={12} color="#FFF" /></View>
-              <View style={[styles.overlapTextLabel, { zIndex: 1, left: -20 }]}>
-                 <Text style={styles.overlapText}>+12</Text>
+              <View style={[styles.overlapAvatar, { zIndex: 3, backgroundColor: colors.primary }]}>
+                <Ionicons name="person" size={12} color="#FFF" />
+              </View>
+              <View style={[styles.overlapTextLabel, { zIndex: 1, left: 15 }]}>
+                 <Text style={styles.overlapText}>?</Text>
               </View>
            </View>
            <View style={styles.collabTextContent}>
               <Text style={styles.collabTitle}>Mode Kolaboratif</Text>
-              <Text style={styles.collabSub}>Aktif dengan teman sebaya</Text>
+              <Text style={styles.collabSub}>Undang teman untuk belajar bersama</Text>
            </View>
-        </View>
+           <Ionicons name="add-circle" size={24} color={colors.primary} />
+        </TouchableOpacity>
 
         {/* Main Mastery Card */}
         <View style={[styles.masteryCard, { backgroundColor: colors.primary }]}>
@@ -97,12 +132,15 @@ export default function ProgressScreen() {
            <Text style={styles.masteryTitle}>Sesi Terdaftar</Text>
            
            <View style={styles.masteryScoreRow}>
-              <Text style={styles.masteryScoreValue}>{sessions?.length || 0}</Text>
-              <Text style={styles.masteryTargetText}>Target: 10 Sesi</Text>
+              <Text style={styles.masteryScoreValue}>{learningPulse?.completed || 0}</Text>
+              <Text style={styles.masteryTargetText}>Target: {learningPulse?.total || 5} Sesi</Text>
            </View>
            
            <View style={styles.progressBarBg}>
-              <View style={[styles.progressBarFill, { width: `${Math.min((sessions?.length || 0) * 10, 100)}%`, backgroundColor: '#FFF' }]} />
+              <View style={[styles.progressBarFill, { 
+                width: learningPulse ? `${Math.min(100, (learningPulse.completed / learningPulse.total) * 100)}%` : '0%', 
+                backgroundColor: '#FFF' 
+              }]} />
            </View>
         </View>
 
@@ -116,10 +154,13 @@ export default function ProgressScreen() {
                  <Text style={styles.rankBadgeText}>Peringkat #4</Text>
               </View>
            </View>
-           <Text style={[styles.pointsValue, { color: colors.text }]}>2,450</Text>
+           <Text style={[styles.pointsValue, { color: colors.text }]}>{currentUser?.stats?.points || 0}</Text>
            <Text style={[styles.pointsSubText, { color: colors.textSecondary }]}>Poin Edu Terkumpul</Text>
            
-           <TouchableOpacity style={[styles.pointsActionBtn, { backgroundColor: colors.primary }]}>
+           <TouchableOpacity 
+             style={[styles.pointsActionBtn, { backgroundColor: colors.primary }]}
+             onPress={() => Alert.alert("Tukarkan Hadiah", "Kumpulkan lebih banyak poin untuk menukarkan dengan voucher belajar!")}
+           >
               <Text style={styles.pointsActionBtnText}>Tukarkan Hadiah</Text>
            </TouchableOpacity>
         </View>
@@ -133,7 +174,14 @@ export default function ProgressScreen() {
            ) : (
              <View style={styles.subjectListWrapper}>
                 {sessions.map((session) => (
-                  <View key={session._id} style={[styles.subjectRowCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <TouchableOpacity 
+                     key={session._id} 
+                     style={[styles.subjectRowCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+                     onPress={() => router.push({
+                        pathname: '/(tabs)/TutorProfileScreen',
+                        params: { tutorId: session.tutorId }
+                     } as any)}
+                   >
                      <View style={styles.subIconRow}>
                         <View style={[styles.subIconBox, { backgroundColor: '#4F46E520' }]}>
                            <Ionicons name="book" size={16} color="#4F46E5" />
@@ -150,7 +198,7 @@ export default function ProgressScreen() {
                      <View style={[styles.subProgressBarBg, { backgroundColor: colors.border }]}>
                         <View style={[styles.subProgressBarFill, { width: session.status === 'completed' ? '100%' : '50%', backgroundColor: session.status === 'completed' ? '#10B981' : '#4F46E5' }]} />
                      </View>
-                  </View>
+                  </TouchableOpacity>
                 ))}
                 {sessions.length === 0 && (
                   <Text style={{ textAlign: 'center', color: colors.textSecondary }}>Belum ada sesi yang dipesan.</Text>
@@ -167,15 +215,21 @@ export default function ProgressScreen() {
            </View>
 
            <View style={styles.badgesGrid}>
-              {BADGES.map((badge) => (
-                <View key={badge.id} style={[styles.badgeCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                   <View style={[styles.badgeIconCircle, { backgroundColor: badge.bg }]}>
-                      <Ionicons name={badge.icon as any} size={24} color={badge.iconColor} />
-                   </View>
-                   <Text style={[styles.badgeTitle, { color: colors.text }, !badge.earned && styles.textMuted]}>{badge.title}</Text>
-                   <Text style={[styles.badgeDesc, { color: colors.textSecondary }]} numberOfLines={2}>{badge.desc}</Text>
+              {earnedBadges.length > 0 ? (
+                earnedBadges.map((badge) => (
+                  <View key={badge.id} style={[styles.badgeCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                    <View style={[styles.badgeIconCircle, { backgroundColor: badge.bg }]}>
+                        <Ionicons name={badge.icon as any} size={24} color={badge.iconColor} />
+                    </View>
+                    <Text style={[styles.badgeTitle, { color: colors.text }]}>{badge.title}</Text>
+                    <Text style={[styles.badgeDesc, { color: colors.textSecondary }]} numberOfLines={2}>{badge.desc}</Text>
+                  </View>
+                ))
+              ) : (
+                <View style={styles.emptyBadgeContainer}>
+                  <Text style={{ color: colors.textSecondary, fontSize: 12 }}>Selesaikan sesi pertamamu untuk mendapatkan lencana!</Text>
                 </View>
-              ))}
+              )}
            </View>
         </View>
 
@@ -184,33 +238,52 @@ export default function ProgressScreen() {
            <Text style={[styles.sectionTitle, { color: colors.text }]}>Aktivitas Belajar</Text>
 
            <View style={[styles.chartCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <View style={styles.chartHeaderRow}>
-                 <View>
-                    <Text style={[styles.chartValueStr, { color: colors.text }]}>24.5</Text>
-                    <Text style={[styles.chartValueLabel, { color: colors.text }]}>Jam</Text>
-                    <Text style={[styles.chartValueDesc, { color: colors.textSecondary }]}>Total waktu belajar{'\n'}minggu ini</Text>
-                 </View>
-                 <View style={[styles.togglePill, { backgroundColor: colors.border }]}>
-                    <TouchableOpacity style={[styles.toggleActive, { backgroundColor: colors.primary }]}><Text style={styles.toggleActiveText}>Minggu</Text></TouchableOpacity>
-                    <TouchableOpacity style={styles.toggleInactive}><Text style={[styles.toggleInactiveText, { color: colors.textSecondary }]}>Bulan</Text></TouchableOpacity>
-                 </View>
-              </View>
-
-              <View style={styles.chartBarsContainer}>
-                 {CHART_DATA.map((item, idx) => (
-                    <View key={idx} style={styles.chartBarCol}>
-                       <View style={[
-                          styles.chartBarFill, 
-                          { 
-                            height: `${item.height}%`, 
-                            backgroundColor: item.active ? colors.primary : colors.border 
-                          },
-                          item.active && styles.chartBarFillActive
-                       ]} />
-                       <Text style={[styles.chartBarLabel, { color: colors.textSecondary }]}>{item.day}</Text>
+              {learningPulse && learningPulse.completed > 0 ? (
+                <>
+                  <View style={styles.chartHeaderRow}>
+                    <View>
+                        <Text style={[styles.chartValueStr, { color: colors.text }]}>{learningPulse?.completed || 0}</Text>
+                        <Text style={[styles.chartValueLabel, { color: colors.text }]}>Sesi</Text>
+                        <Text style={[styles.chartValueDesc, { color: colors.textSecondary }]}>Total sesi selesai{'\n'}minggu ini</Text>
                     </View>
-                 ))}
-              </View>
+                    <View style={[styles.togglePill, { backgroundColor: colors.border }]}>
+                        <TouchableOpacity 
+                          style={[styles.toggleActive, activeTab === 'Minggu' && { backgroundColor: colors.primary }]}
+                          onPress={() => setActiveTab('Minggu')}
+                        >
+                          <Text style={[styles.toggleActiveText, activeTab !== 'Minggu' && { color: colors.textSecondary }]}>Minggu</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                          style={[styles.toggleInactive, activeTab === 'Bulan' && { backgroundColor: colors.primary, borderRadius: 16 }]}
+                          onPress={() => setActiveTab('Bulan')}
+                        >
+                          <Text style={[styles.toggleInactiveText, { color: activeTab === 'Bulan' ? '#FFF' : colors.textSecondary }]}>Bulan</Text>
+                        </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  <View style={styles.chartBarsContainer}>
+                    {chartData.map((item, idx) => (
+                        <View key={idx} style={styles.chartBarCol}>
+                            <View style={[
+                              styles.chartBarFill, 
+                              { 
+                                height: `${Math.max(8, item.height)}%`, 
+                                backgroundColor: item.active ? colors.primary : colors.border 
+                              },
+                              item.active && styles.chartBarFillActive
+                            ]} />
+                            <Text style={[styles.chartBarLabel, { color: colors.textSecondary }]}>{item.day}</Text>
+                        </View>
+                    ))}
+                  </View>
+                </>
+              ) : (
+                <View style={styles.emptyChartState}>
+                  <Ionicons name="bar-chart-outline" size={48} color={colors.border} />
+                  <Text style={[styles.emptyChartText, { color: colors.textSecondary, textAlign: 'center', marginTop: 10 }]}>Grafik aktivitas akan muncul setelah kamu menyelesaikan sesi belajar.</Text>
+                </View>
+              )}
            </View>
         </View>
 
@@ -571,6 +644,13 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 16,
   },
+  emptyBadgeContainer: {
+    width: '100%',
+    padding: 20,
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.02)',
+    borderRadius: 20,
+  },
   textMuted: {
     color: '#9CA3AF', 
   },
@@ -663,5 +743,25 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '600',
     color: '#9CA3AF',
+  },
+  miniProgressTrack: {
+    height: 12,
+    backgroundColor: '#EEF2FF',
+    borderRadius: 6,
+  },
+  miniProgressFill: {
+    height: 12,
+    borderRadius: 6,
+  },
+  emptyChartState: {
+    alignItems: 'center',
+    paddingVertical: 30,
+    justifyContent: 'center',
+  },
+  emptyChartText: {
+    fontSize: 13,
+    paddingHorizontal: 40,
+    lineHeight: 20,
+    marginTop: 10,
   },
 });

@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  SafeAreaView, 
-  TextInput, 
-  TouchableOpacity, 
-  KeyboardAvoidingView, 
-  Platform, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  TextInput,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
   Dimensions,
   Alert,
@@ -27,7 +27,7 @@ const { width, height } = Dimensions.get('window');
 export default function LoginScreen() {
   const router = useRouter();
   const { updateProfile, clearProfile } = useProfile();
-  
+
   const [activeRole, setActiveRole] = useState<'learner' | 'tutor'>('learner');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -59,16 +59,16 @@ export default function LoginScreen() {
 
     if (valid) {
       setIsLoading(true);
-      
+
       // Simulasi delay login
       setTimeout(() => {
         if (user) {
           // Periksa role user
           const userRole = user.role || 'learner'; // fallback jika role tidak ada
           if (userRole !== activeRole) {
-             Alert.alert("Error", `Akun ini terdaftar sebagai ${userRole}, bukan ${activeRole}.`);
-             setIsLoading(false);
-             return;
+            Alert.alert("Error", `Akun ini terdaftar sebagai ${userRole}, bukan ${activeRole}.`);
+            setIsLoading(false);
+            return;
           }
 
           // Jika user ditemukan di database, update profile context
@@ -84,7 +84,7 @@ export default function LoginScreen() {
             year: user.year || '-',
             profileImage: user.profileImage || undefined,
           });
-          
+
           if (activeRole === 'tutor') {
             router.replace('/tutor/TutorDashboardScreen' as any);
           } else {
@@ -115,7 +115,7 @@ export default function LoginScreen() {
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
             <Text style={styles.title}>
-              {activeRole === 'tutor' ? 'Selamat\nDatang Tutor 👋' : 'Selamat\nDatang Kembali 👋'}
+              {activeRole === 'tutor' ? 'Selamat\nDatang Tutor 👋' : 'Selamat\nDatang 👋'}
             </Text>
             <Text style={styles.subtitle} numberOfLines={1} adjustsFontSizeToFit>
               {activeRole === 'tutor' ? 'Masuk untuk mulai mengajar dan berbagi ilmu.' : 'Masuk untuk melanjutkan perjalanan belajarmu dengan AI.'}
@@ -123,53 +123,53 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.cardContainer}>
-             <View style={styles.formContainer}>
-               <View style={styles.roleSelector}>
-                 <TouchableOpacity 
-                   style={[styles.roleButton, activeRole === 'learner' && styles.roleButtonActive]}
-                   onPress={() => setActiveRole('learner')}
-                 >
-                   <Text style={[styles.roleButtonText, activeRole === 'learner' && styles.roleButtonTextActive]}>Pelajar</Text>
-                 </TouchableOpacity>
-                 <TouchableOpacity 
-                   style={[styles.roleButton, activeRole === 'tutor' && styles.roleButtonActive]}
-                   onPress={() => setActiveRole('tutor')}
-                 >
-                   <Text style={[styles.roleButtonText, activeRole === 'tutor' && styles.roleButtonTextActive]}>Tutor</Text>
-                 </TouchableOpacity>
-               </View>
+            <View style={styles.formContainer}>
+              <View style={styles.roleSelector}>
+                <TouchableOpacity
+                  style={[styles.roleButton, activeRole === 'learner' && styles.roleButtonActive]}
+                  onPress={() => setActiveRole('learner')}
+                >
+                  <Text style={[styles.roleButtonText, activeRole === 'learner' && styles.roleButtonTextActive]}>Pelajar</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.roleButton, activeRole === 'tutor' && styles.roleButtonActive]}
+                  onPress={() => setActiveRole('tutor')}
+                >
+                  <Text style={[styles.roleButtonText, activeRole === 'tutor' && styles.roleButtonTextActive]}>Tutor</Text>
+                </TouchableOpacity>
+              </View>
 
-               <InputField label="Alamat Email" placeholder="kamu@universitas.ac.id" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-               <Text style={styles.errorText}>{errors.email ? errors.email : ' '}</Text>
+              <InputField label="Alamat Email" placeholder="Masukkan alamat email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+              <Text style={styles.errorText}>{errors.email ? errors.email : ' '}</Text>
 
-               <InputField label="Kata Sandi" placeholder="Masukkan kata sandi" value={password} onChangeText={setPassword} secureTextEntry />
-               <Text style={styles.errorText}>{errors.password ? errors.password : ' '}</Text>
+              <InputField label="Kata Sandi" placeholder="Masukkan kata sandi" value={password} onChangeText={setPassword} secureTextEntry />
+              <Text style={styles.errorText}>{errors.password ? errors.password : ' '}</Text>
 
-               <TouchableOpacity style={styles.forgotPassword}>
-                 <Text style={styles.forgotPasswordText}>Lupa Kata Sandi?</Text>
-               </TouchableOpacity>
+              <TouchableOpacity style={styles.forgotPassword}>
+                <Text style={styles.forgotPasswordText}>Lupa Kata Sandi?</Text>
+              </TouchableOpacity>
 
-               <View style={styles.mainButtonContainer}>
-                 {isLoading ? (
-                    <ActivityIndicator size="large" color="#4F46E5" />
-                 ) : (
-                    <CustomButton title={activeRole === 'tutor' ? "Masuk Sebagai Tutor" : "Masuk Sekarang"} onPress={handleLogin} style={styles.loginBtnStyle} />
-                 )}
-               </View>
+              <View style={styles.mainButtonContainer}>
+                {isLoading ? (
+                  <ActivityIndicator size="large" color="#4F46E5" />
+                ) : (
+                  <CustomButton title={activeRole === 'tutor' ? "Masuk Sebagai Tutor" : "Masuk Sekarang"} onPress={handleLogin} style={styles.loginBtnStyle} />
+                )}
+              </View>
 
-               <View style={styles.dividerContainer}>
-                 <View style={styles.dividerLine} />
-                 <Text style={styles.dividerText}>ATAU LOG IN DENGAN</Text>
-                 <View style={styles.dividerLine} />
-               </View>
+              <View style={styles.dividerContainer}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>ATAU LOG IN DENGAN</Text>
+                <View style={styles.dividerLine} />
+              </View>
 
-               <View style={styles.socialButtonsRow}>
-                 <TouchableOpacity style={styles.socialBtn}>
-                   <Image source={require('../../assets/images/google-logo.png')} style={{ width: 24, height: 24 }} />
-                 </TouchableOpacity>
-                 <TouchableOpacity style={styles.socialBtn}><Ionicons name="logo-apple" size={24} color="#000000" /></TouchableOpacity>
-               </View>
-             </View>
+              <View style={styles.socialButtonsRow}>
+                <TouchableOpacity style={styles.socialBtn}>
+                  <Image source={require('../../assets/images/google-logo.png')} style={{ width: 24, height: 24 }} />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.socialBtn}><Ionicons name="logo-apple" size={24} color="#000000" /></TouchableOpacity>
+              </View>
+            </View>
           </View>
 
           <View style={styles.registerContainer}>
@@ -178,7 +178,7 @@ export default function LoginScreen() {
             </Text>
             <TouchableOpacity onPress={navigateToRegister}>
               <Text style={styles.registerLink}>
-                {activeRole === 'tutor' ? 'Register as Tutor' : 'Daftar di sini'}
+                {activeRole === 'tutor' ? 'Daftar sebagai tutor' : 'Daftar di sini'}
               </Text>
             </TouchableOpacity>
           </View>

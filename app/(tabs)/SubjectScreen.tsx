@@ -9,83 +9,34 @@ import {
   TouchableOpacity,
   Dimensions,
   Platform,
-  Alert
+  ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../context/ThemeContext';
-// import { BottomTabBar } from '../components/BottomTabBar';
+import { useQuery } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import { useProfile } from '../../context/ProfileContext';
 
 const { width } = Dimensions.get('window');
-
-const INITIAL_SUBJECTS = [
-  {
-    id: '1',
-    title: 'Matematika Lanjutan',
-    desc: 'Aljabar Linear, Kalkulus III, dan Persamaan Diferensial.',
-    progress: 72,
-    badge: 'AKTIF',
-    actionText: 'Buka Meja Belajar',
-    themeColor: '#4F46E5', // blue/purple
-    icon: 'calculator-outline'
-  },
-  {
-    id: '2',
-    title: 'Psikologi Kognitif',
-    desc: 'Sistem memori, atensi, dan teori persepsi.',
-    progress: 45,
-    badge: 'PERSIAPAN UJIAN',
-    actionText: 'Lanjutkan Membaca',
-    themeColor: '#9333EA', // purple
-    icon: 'brain'
-  }
-];
-
-const CATEGORIES = [
-  { id: '1', title: 'AI & Etika', desc: 'Implikasi filosofis dari kecerdasan mesin.', files: 12, icon: 'hardware-chip' },
-  { id: '2', title: 'Biologi Molekuler', desc: 'Dasar-dasar CRISPR dan rekayasa genetika.', files: 8, icon: 'flask' },
-  { id: '3', title: 'Perencanaan Wilayah', desc: 'Desain kota berkelanjutan dan infrastruktur.', files: 15, icon: 'business' }
-];
-
-const RECENT_NOTES = [
-  { id: '1', title: 'Intro Jaringan Syaraf', time: 'Dibuat 2 jam lalu • Studi AI', icon: 'document-text' },
-  { id: '2', title: 'Hukum Termodinamika', time: 'Diperbarui kemarin • Fisika', icon: 'document' },
-  { id: '3', title: 'Aliran Seni Renaisans', time: 'Diperbarui 3 hari lalu • Sejarah', icon: 'color-palette' },
-];
 
 export default function SubjectScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const [subjects, setSubjects] = useState(INITIAL_SUBJECTS);
+  const { profileData } = useProfile();
   const [searchQuery, setSearchQuery] = useState('');
 
-  const handleAddSubject = () => {
-    // Basic local state append to satisfy requirement
-    // In a real app we'd open a modal. Here we just push a dummy.
-    Alert.alert(
-      "Tambah Mata Kuliah",
-      "Apakah Anda ingin menambahkan kelas dummy 'Struktur Data & Algoritma'?",
-      [
-        { text: "Batal", style: "cancel" },
-        { 
-          text: "Tambah", 
-          onPress: () => {
-            const newSub = {
-              id: Date.now().toString(),
-              title: 'Struktur Data & Algoritma',
-              desc: 'Array, Linked List, Tree, Graph, dan Kompleksitas.',
-              progress: 0,
-              badge: 'BARU',
-              actionText: 'Mulai Belajar',
-              themeColor: '#10B981',
-              icon: 'code-slash'
-            };
-            setSubjects([newSub, ...subjects]);
-          }
-        }
-      ]
-    );
-  };
+  const currentUser = useQuery(api.users.getUserByEmail, profileData?.email ? { email: profileData.email } : "skip");
+  
+  const sessions = useQuery(api.sessions.getSessionsByUser, 
+    (currentUser && currentUser.role) ? { userId: currentUser._id, role: currentUser.role as "tutor" | "learner" } : "skip"
+  );
+
+  const filteredSessions = sessions?.filter(session => 
+    session.subject.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (session.tutor?.name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (session.learner?.name || "").toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
@@ -113,14 +64,14 @@ export default function SubjectScreen() {
         
         {/* Title Section */}
         <View style={styles.titleSection}>
-           <Text style={[styles.mainTitle, { color: colors.text }]}>Manajemen Mata{'\n'}Kuliah</Text>
-           <Text style={[styles.mainDesc, { color: colors.textSecondary }]}>Atur perjalanan akademikmu dengan wawasan bertenaga AI.</Text>
+           <Text style={[styles.mainTitle, { color: colors.text }]}>Manajemen Sesi</Text>
+           <Text style={[styles.mainDesc, { color: colors.textSecondary }]}>Kelola semua jadwal belajarmu di satu tempat.</Text>
            
            <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
              <Ionicons name="search" size={20} color={colors.textSecondary} />
              <TextInput 
                style={[styles.searchInput, { color: colors.text }]}
-               placeholder="Cari mata kuliah atau materi..."
+               placeholder="Cari sesi atau nama partner..."
                placeholderTextColor={colors.textSecondary}
                value={searchQuery}
                onChangeText={setSearchQuery}
@@ -128,119 +79,52 @@ export default function SubjectScreen() {
            </View>
         </View>
 
-        {/* Subjects List (Large Cards) */}
+        {/* Sessions List */}
         <View style={styles.cardsSection}>
-          {subjects.map((sub, idx) => (
-            <View key={sub.id} style={[styles.subjectCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-               <View style={styles.subHeaderRow}>
-                 <View style={[styles.subIconBox, { backgroundColor: sub.themeColor + '15' }]}>
-                    <Ionicons name={sub.icon as any} size={20} color={sub.themeColor} />
-                 </View>
-                 <View style={[styles.badgeBox, { backgroundColor: colors.primaryLight }]}>
-                   <Text style={[styles.badgeText, { color: colors.primary }]}>{sub.badge}</Text>
-                 </View>
-               </View>
+          {filteredSessions === undefined ? (
+            <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
+          ) : filteredSessions.length === 0 ? (
+            <Text style={{ textAlign: 'center', color: colors.textSecondary, marginTop: 40 }}>Belum ada sesi yang ditemukan.</Text>
+          ) : (
+            filteredSessions.map((session, idx) => {
+              const isTutor = currentUser?.role === 'tutor';
+              const partnerName = isTutor ? session.learner?.name : session.tutor?.name;
+              
+              let statusColor = colors.primary;
+              if (session.status === 'completed') statusColor = '#10B981';
+              if (session.status === 'cancelled') statusColor = '#EF4444';
+              if (session.status === 'pending') statusColor = '#F59E0B';
 
-               <Text style={[styles.subTitle, { color: colors.text }]}>{sub.title}</Text>
-               <Text style={[styles.subDesc, { color: colors.textSecondary }]}>{sub.desc}</Text>
-
-               <View style={styles.progressRow}>
-                 <Text style={[styles.progressLabel, { color: colors.textSecondary }]}>Kemajuan Kursus</Text>
-                 <Text style={[styles.progressLabel, { color: sub.themeColor }]}>{sub.progress}%</Text>
-               </View>
-               <View style={[styles.progressBarBg, { backgroundColor: colors.border }]}>
-                 <View style={[styles.progressBarFill, { width: `${sub.progress}%`, backgroundColor: sub.themeColor }]} />
-               </View>
-
-               <View style={styles.actionsRow}>
-                 <TouchableOpacity 
-                   style={[styles.mainActionBtn, { backgroundColor: sub.themeColor }]}
-                   onPress={() => router.push('/SubjectDetailScreen' as any)}
-                 >
-                   <Text style={styles.mainActionText}>{sub.actionText}</Text>
-                 </TouchableOpacity>
-                 <TouchableOpacity style={[styles.moreActionBtn, { borderColor: colors.border }]}>
-                   <Ionicons name="ellipsis-horizontal" size={20} color={colors.textSecondary} />
-                 </TouchableOpacity>
-               </View>
-            </View>
-          ))}
-        </View>
-
-        {/* Topik Terkategorisasi */}
-        <View style={styles.sectionHeader}>
-           <Text style={[styles.sectionTitle, { color: colors.text }]}>Topik Terkategorisasi</Text>
-        </View>
-        <View style={styles.categorySection}>
-           {CATEGORIES.map(cat => (
-             <View key={cat.id} style={[styles.categoryCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                <View style={styles.catHeader}>
-                   <View style={[styles.catIconBox, { backgroundColor: colors.primaryLight }]}>
-                     <Ionicons name={cat.icon as any} size={16} color={colors.primary} />
+              return (
+                <View key={session._id} style={[styles.subjectCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                   <View style={styles.subHeaderRow}>
+                     <View style={[styles.subIconBox, { backgroundColor: statusColor + '15' }]}>
+                        <Ionicons name="calendar-outline" size={20} color={statusColor} />
+                     </View>
+                     <View style={[styles.badgeBox, { backgroundColor: statusColor + '20' }]}>
+                       <Text style={[styles.badgeText, { color: statusColor }]}>{session.status.toUpperCase()}</Text>
+                     </View>
                    </View>
-                   <View style={[styles.catFileBadge, { backgroundColor: colors.avatarBg }]}>
-                      <Text style={styles.catFileText}>{cat.files} File</Text>
+
+                   <Text style={[styles.subTitle, { color: colors.text }]}>{session.subject}</Text>
+                   <Text style={[styles.subDesc, { color: colors.textSecondary }]}>
+                     {session.date} | {session.time} • {isTutor ? 'Siswa' : 'Tutor'}: {partnerName || 'Menunggu Info'}
+                   </Text>
+
+                   <View style={styles.actionsRow}>
+                     <TouchableOpacity 
+                       style={[styles.mainActionBtn, { backgroundColor: statusColor }]}
+                       onPress={() => router.push('/chat/ChatListScreen' as any)}
+                     >
+                       <Text style={styles.mainActionText}>Lihat Obrolan</Text>
+                     </TouchableOpacity>
                    </View>
                 </View>
-                <Text style={[styles.catTitle, { color: colors.text }]}>{cat.title}</Text>
-                <Text style={[styles.catDesc, { color: colors.textSecondary }]}>{cat.desc}</Text>
-             </View>
-           ))}
+              );
+            })
+          )}
         </View>
-
-        {/* Unggah Materi (Upload Block) */}
-        <View style={[styles.uploadBlock, { backgroundColor: colors.primary }]}>
-           <Text style={styles.uploadTitle}>Unggah Materi</Text>
-           <Text style={styles.uploadDesc}>
-              Unggah PDF, catatan kuliah, atau gambar. AI kami akan secara otomatis mengkategorikannya ke dalam topik.
-           </Text>
-           
-           <TouchableOpacity style={[styles.uploadBoxDashed, { borderColor: '#FFF' }]}>
-              <View style={[styles.uploadIconCircle, { backgroundColor: colors.primaryLight }]}>
-                 <Ionicons name="cloud-upload" size={24} color={colors.primary} />
-              </View>
-              <Text style={styles.uploadBoxTitle}>Tarik file ke sini atau klik untuk mencari</Text>
-              <Text style={styles.uploadBoxSub}>Dukung PDF, DOCX, PNG (Maks 50MB)</Text>
-           </TouchableOpacity>
-
-           {/* Upload Progress Mock */}
-           <View style={[styles.uploadProgressRow, { backgroundColor: 'rgba(255,255,255,0.1)' }]}>
-              <Ionicons name="document-text" size={16} color="#FFF" style={{marginRight: 8}} />
-              <View style={{ flex: 1 }}>
-                 <Text style={styles.uploadFileName}>Midterm_Review.pdf</Text>
-                 <View style={[styles.uploadProbBarLine, { backgroundColor: 'rgba(255,255,255,0.2)' }]}>
-                    <View style={[styles.uploadProbBarFill, { backgroundColor: '#FFF' }]} />
-                 </View>
-              </View>
-              <Text style={styles.uploadFilePercent}>86%</Text>
-           </View>
-        </View>
-
-        {/* Catatan Terbaru */}
-        <View style={styles.lastSection}>
-           <View style={styles.sectionHeaderLine}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Catatan Terbaru</Text>
-              <TouchableOpacity><Text style={[styles.linkText, { color: colors.primary }]}>Lihat Semua</Text></TouchableOpacity>
-           </View>
-
-           {RECENT_NOTES.map(note => (
-             <View key={note.id} style={[styles.noteRow, { borderBottomColor: colors.border }]}>
-                <View style={[styles.noteIconCircle, { backgroundColor: colors.primaryLight }]}>
-                   <Ionicons name={note.icon as any} size={16} color={colors.primary} />
-                </View>
-                <View style={styles.noteInfo}>
-                   <Text style={[styles.noteTitle, { color: colors.text }]}>{note.title}</Text>
-                   <Text style={[styles.noteTime, { color: colors.textSecondary }]}>{note.time}</Text>
-                </View>
-             </View>
-           ))}
-        </View>
-
       </ScrollView>
-
-      <TouchableOpacity style={styles.fabBtn} onPress={handleAddSubject}>
-         <Ionicons name="add" size={28} color="#FFF" />
-      </TouchableOpacity>
 
       {/* Manual BottomTabBar removed */}
     </SafeAreaView>

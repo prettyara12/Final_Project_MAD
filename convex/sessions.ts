@@ -10,10 +10,34 @@ export const bookSession = mutation({
     time: v.string(),
   },
   handler: async (ctx, args) => {
-    return await ctx.db.insert("sessions", {
+    const sessionId = await ctx.db.insert("sessions", {
       ...args,
       status: "pending",
     });
+    
+    // Create notification for Tutor
+    const learner = await ctx.db.get(args.learnerId);
+    await ctx.db.insert("notifications", {
+      userId: args.tutorId,
+      title: "Permintaan Sesi Baru",
+      description: `${learner?.name || "Siswa"} memesan sesi ${args.subject} pada ${args.date} ${args.time}.`,
+      type: "booking",
+      read: false,
+      createdAt: Date.now(),
+    });
+
+    // Create notification for Learner
+    const tutor = await ctx.db.get(args.tutorId);
+    await ctx.db.insert("notifications", {
+      userId: args.learnerId,
+      title: "Pesanan Sesi Terkirim",
+      description: `Pesanan sesi ${args.subject} kamu pada ${args.date} ${args.time} telah dikirim ke Tutor ${tutor?.name || ""}. Menunggu konfirmasi.`,
+      type: "booking",
+      read: false,
+      createdAt: Date.now(),
+    });
+
+    return sessionId;
   },
 });
 
@@ -120,6 +144,17 @@ export const acceptRequest = mutation({
       });
     }
 
+    // Create notification for Learner
+    const tutor = await ctx.db.get(session.tutorId);
+    await ctx.db.insert("notifications", {
+      userId: session.learnerId,
+      title: "Sesi Dikonfirmasi",
+      description: `Tutor ${tutor?.name || ""} telah menerima pesanan sesi ${session.subject} kamu pada ${session.date} ${session.time}.`,
+      type: "booking",
+      read: false,
+      createdAt: Date.now(),
+    });
+
     return conversationId;
   },
 });
@@ -127,6 +162,20 @@ export const acceptRequest = mutation({
 export const rejectRequest = mutation({
   args: { sessionId: v.id("sessions") },
   handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.sessionId);
+    if (!session) throw new Error("Session not found");
+
     await ctx.db.patch(args.sessionId, { status: "cancelled" });
+
+    // Create notification for Learner
+    const tutor = await ctx.db.get(session.tutorId);
+    await ctx.db.insert("notifications", {
+      userId: session.learnerId,
+      title: "Sesi Ditolak",
+      description: `Tutor ${tutor?.name || ""} tidak dapat menerima pesanan sesi ${session.subject} kamu pada ${session.date} ${session.time}.`,
+      type: "system",
+      read: false,
+      createdAt: Date.now(),
+    });
   },
 });

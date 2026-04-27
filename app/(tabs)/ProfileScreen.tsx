@@ -60,6 +60,8 @@ export default function ProfileScreen() {
     }
   }, [personalInfoVisible, currentUser, profileData]);
 
+
+  // Security and Theme States
   const [twoFAEnabled, setTwoFAEnabled] = useState(false);
   const [biometricEnabled, setBiometricEnabled] = useState(true);
 
@@ -106,7 +108,10 @@ export default function ProfileScreen() {
   }
 
   // Gunakan data dari database jika ada, jika tidak gunakan dari context
-  const displayUser = currentUser || {
+  const displayUser = currentUser ? {
+    ...currentUser,
+    role: currentUser.role || 'learner'
+  } : {
     name: profileData.name,
     role: 'learner',
     university: profileData.university,
@@ -127,7 +132,10 @@ export default function ProfileScreen() {
           </View>
           <Text style={[styles.headerLogoText, { color: colors.primary }]}>EduPartner AI</Text>
         </View>
-        <TouchableOpacity style={styles.notificationBtn}>
+        <TouchableOpacity 
+          style={styles.notificationBtn}
+          onPress={() => router.push('/NotificationScreen' as any)}
+        >
           <Ionicons name="notifications" size={20} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
@@ -162,16 +170,6 @@ export default function ProfileScreen() {
               <Text style={styles.proButtonText}>Tingkatkan ke Pro</Text>
            </TouchableOpacity>
         </View>
-
-        <TouchableOpacity style={[styles.pulseCard, { backgroundColor: colors.card }]} onPress={() => router.push('/ProgressScreen' as any)}>
-           <View style={styles.cardHeaderRow}>
-              <Ionicons name="trending-up" size={20} color={colors.primary} />
-              <Text style={[styles.cardTitle, { color: colors.text }]}>Denyut Belajar</Text>
-              <View style={{ flex: 1 }} />
-              <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
-           </View>
-           <Text style={{ color: colors.textSecondary, fontSize: 12 }}>Lihat progres belajarmu di sini.</Text>
-        </TouchableOpacity>
 
         <View style={styles.sectionWrapper}>
            <Text style={[styles.sectionHeaderTitle, { color: colors.text }]}>Beralih Cepat</Text>
@@ -315,9 +313,6 @@ const styles = StyleSheet.create({
   profileSubtext: { fontSize: 13, marginBottom: 16 },
   proButton: { width: '100%', paddingVertical: 14, borderRadius: 24, alignItems: 'center' },
   proButtonText: { color: '#FFFFFF', fontWeight: '700', fontSize: 14 },
-  pulseCard: { marginHorizontal: 20, borderRadius: 32, padding: 24, marginBottom: 24 },
-  cardHeaderRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 8 },
-  cardTitle: { fontSize: 16, fontWeight: '800' },
   sectionWrapper: { paddingHorizontal: 20, marginBottom: 24 },
   sectionHeaderTitle: { fontSize: 16, fontWeight: '800', marginBottom: 12 },
   toggleCardGroup: { borderRadius: 24, paddingHorizontal: 20 },

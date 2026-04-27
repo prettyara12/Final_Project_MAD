@@ -31,9 +31,11 @@ export default function TutorDashboardScreen() {
   const user = useQuery(api.users.getUserByEmail, { email: profileData.email });
   const tutorId = user?._id;
 
-  // Fetch Requests and Sessions
+  // Fetch Requests, Sessions, and Notifications
   const pendingRequests = useQuery(api.sessions.getStudentRequests, tutorId ? { tutorId } : "skip");
   const upcomingSessions = useQuery(api.sessions.getTutorSessions, tutorId ? { tutorId } : "skip");
+  const notifications = useQuery(api.notifications.getNotifications, tutorId ? { userId: tutorId } : "skip");
+  const unreadCount = notifications ? notifications.filter((n: any) => !n.read).length : 0;
 
   // Mutations
   const acceptRequest = useMutation(api.sessions.acceptRequest);
@@ -89,8 +91,16 @@ export default function TutorDashboardScreen() {
             <Text style={[styles.greeting, { color: colors.textSecondary }]}>Halo, Tutor 👋</Text>
             <Text style={[styles.name, { color: colors.text }]}>{profileData.name}</Text>
           </View>
-          <TouchableOpacity style={[styles.notifBtn, { backgroundColor: colors.primaryLight }]}>
+          <TouchableOpacity 
+            style={[styles.notifBtn, { backgroundColor: colors.primaryLight }]}
+            onPress={() => router.push('/NotificationScreen' as any)}
+          >
              <Ionicons name="notifications-outline" size={24} color={colors.primary} />
+             {unreadCount > 0 && (
+               <View style={styles.notifBadgeCount}>
+                 <Text style={styles.notifBadgeCountText}>{unreadCount}</Text>
+               </View>
+             )}
           </TouchableOpacity>
         </View>
 
@@ -189,6 +199,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#EEF2FF',
     justifyContent: 'center',
     alignItems: 'center',
+    position: 'relative',
+  },
+  notifBadgeCount: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    backgroundColor: '#EF4444',
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  notifBadgeCountText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#FFF',
   },
   section: {
     marginBottom: 32,

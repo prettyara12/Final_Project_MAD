@@ -9,7 +9,8 @@ import {
   Dimensions,
   Platform,
   ActivityIndicator,
-  Image
+  Image,
+  Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -57,23 +58,27 @@ const REVIEWS = [
 
 export default function TutorProfileScreen() {
   const router = useRouter();
-  const { id } = useLocalSearchParams();
-  const { colors, isDark } = useTheme();
+  const { colors } = useTheme();
 
   // Convex Integration
-  const tutor = useQuery(api.tutors.getTutorById, { id: id as any });
+  const { id, tutorId } = useLocalSearchParams();
+  const finalId = (tutorId || id) as string;
+  const tutor = useQuery(api.tutors.getTutorDetail, finalId ? { id: finalId } : "skip");
 
   const [selectedDate, setSelectedDate] = useState('12');
   const [selectedTime, setSelectedTime] = useState('10:30 AM');
 
   const handleBookSession = () => {
-    if (!tutor) return;
+    if (!tutor || !tutor.user) {
+      Alert.alert("Data Tidak Lengkap", "Maaf, data tutor tidak lengkap. Silakan coba lagi nanti.");
+      return;
+    }
     router.push({
-      pathname: '/BookingScreen',
+      pathname: '/(tabs)/BookingScreen',
       params: { 
-        tutorId: tutor.user?._id,
-        tutorName: tutor.user?.name,
-        subject: (tutor.subjects && tutor.subjects.length > 0) ? tutor.subjects[0] : 'General'
+        tutorId: String(tutor.user._id),
+        tutorName: String(tutor.user.name),
+        subject: (tutor.subjects && tutor.subjects.length > 0) ? String(tutor.subjects[0]) : 'General'
       }
     } as any);
   };
@@ -90,10 +95,28 @@ export default function TutorProfileScreen() {
     ));
   };
 
-  if (!tutor) {
+  if (tutor === undefined) {
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background, justifyContent: 'center' }]}>
         <ActivityIndicator size="large" color={colors.primary} />
+      </SafeAreaView>
+    );
+  }
+
+  if (tutor === null) {
+    return (
+      <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
+        <Ionicons name="alert-circle-outline" size={64} color={colors.border} />
+        <Text style={[styles.tutorName, { color: colors.text, marginTop: 16 }]}>Tutor Tidak Ditemukan</Text>
+        <Text style={[styles.aboutText, { color: colors.textSecondary, textAlign: 'center', paddingHorizontal: 40 }]}>
+           Maaf, profil tutor yang Anda cari tidak dapat ditemukan atau sudah tidak tersedia.
+        </Text>
+        <TouchableOpacity 
+          style={[styles.bookButton, { backgroundColor: colors.primary, width: 200, marginTop: 24 }]} 
+          onPress={() => router.back()}
+        >
+          <Text style={styles.bookButtonText}>Kembali</Text>
+        </TouchableOpacity>
       </SafeAreaView>
     );
   }
@@ -143,8 +166,8 @@ export default function TutorProfileScreen() {
           </Text>
 
           <View style={styles.ratingRow}>
-            {renderStars(Math.round(tutor.rating))}
-            <Text style={[styles.ratingScore, { color: colors.text }]}>{tutor.rating.toFixed(1)}</Text>
+            {renderStars(Math.round(tutor.rating || 0))}
+            <Text style={[styles.ratingScore, { color: colors.text }]}>{(tutor.rating || 0).toFixed(1)}</Text>
             <Text style={[styles.ratingReviews, { color: colors.textSecondary }]}>(124 ulasan)</Text>
           </View>
 

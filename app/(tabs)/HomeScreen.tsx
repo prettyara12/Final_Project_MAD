@@ -10,7 +10,8 @@ import {
   Dimensions,
   Platform,
   ActivityIndicator,
-  Image
+  Image,
+  Alert
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -38,6 +39,7 @@ export default function HomeScreen() {
   const sessions = useQuery(api.sessions.getSessionsByUser, 
     (currentUser && currentUser.role) ? { userId: currentUser._id, role: currentUser.role as "tutor" | "learner" } : "skip"
   );
+  
 
   // AI Recommendation Integration
   const recommendedTutors = useQuery(api.tutors.getRecommendedTutors, {
@@ -45,6 +47,8 @@ export default function HomeScreen() {
     preferredTime: "08:00", // Default preferred time
     learningStyle: "Visual", // Default learning style
   });
+
+  const recommendedGroups = useQuery(api.groups.getRecommendedGroups);
 
   const [aiInsights, setAiInsights] = useState<any[] | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -211,7 +215,7 @@ export default function HomeScreen() {
                       </View>
                       <TouchableOpacity 
                         style={[styles.bookBtnSmall, { backgroundColor: colors.primary }]}
-                        onPress={() => tutor?._id && router.push({ pathname: '/BookingScreen', params: { tutorId: tutor._id } } as any)}
+                        onPress={() => tutor?.user?._id && router.push({ pathname: '/BookingScreen', params: { tutorId: tutor.user._id } } as any)}
                       >
                         <Text style={styles.bookBtnTextSmall}>Pesan</Text>
                       </TouchableOpacity>
@@ -227,30 +231,48 @@ export default function HomeScreen() {
           )}
         </View>
 
-        {/* Popular Subjects */}
+
+
+        {/* Recommended Groups */}
         <View style={styles.sectionContainer}>
-          <View style={[styles.popularSubjectsBox, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Mata Kuliah Populer</Text>
-            
-            {popularSubjects === undefined ? (
-              <ActivityIndicator size="small" color={colors.primary} />
-            ) : (
-              <View style={styles.subjectsGrid}>
-                {popularSubjects.map((sub) => (
-                  <TouchableOpacity 
-                    key={sub._id} 
-                    style={styles.subjectCard}
-                    onPress={() => router.push({ pathname: '/SubjectDetailScreen', params: { id: sub._id } } as any)}
-                  >
-                    <View style={[styles.subjectIconWrap, { backgroundColor: colors.primaryLight }]}>
-                      <Ionicons name="book-outline" size={24} color={colors.primary} />
-                    </View>
-                    <Text style={[styles.subjectName, { color: colors.textSecondary }]}>{sub.name || sub.title}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
+          <View style={styles.sectionHeader}>
+            <View>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Grup Belajar</Text>
+              <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>Belajar bersama teman lebih menyenangkan</Text>
+            </View>
+            <TouchableOpacity onPress={() => Alert.alert("Segera Hadir", "Fitur eksplorasi grup akan segera hadir!")}>
+              <Text style={[styles.linkText, { color: colors.primary }]}>Lihat Semua</Text>
+            </TouchableOpacity>
           </View>
+
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalScrollContent}
+          >
+            {recommendedGroups === undefined ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (recommendedGroups || []).map((group: any) => (
+              <TouchableOpacity 
+                key={group._id} 
+                style={[styles.groupCardHome, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}
+              >
+                <View style={[styles.groupIconBoxHome, { backgroundColor: colors.primaryLight }]}>
+                  <Ionicons name="people" size={24} color={colors.primary} />
+                </View>
+                <Text style={[styles.groupTitleHome, { color: colors.text }]} numberOfLines={1}>{group.title}</Text>
+                <Text style={[styles.groupMetaHome, { color: colors.textSecondary }]}>{group.participants} Peserta • {group.tutorName}</Text>
+                
+                <View style={styles.groupAvatarsHome}>
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <View key={i} style={[styles.miniAvatarHome, { left: i * 15, zIndex: 10 - i, backgroundColor: colors.avatarBg, borderColor: colors.surface }]}>
+                      <Ionicons name="person" size={10} color="#FFF" />
+                    </View>
+                  ))}
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
 
         {/* Upcoming Sessions */}
@@ -262,8 +284,6 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {/* Jika currentUser null (belum login/terdaftar), sessions akan 'skip' dan bernilai undefined. 
-              Kita tampilkan state kosong daripada spinner terus-menerus. */}
           {sessions && sessions.length > 0 ? (
             sessions.slice(0, 2).map((session) => (
               <View key={session._id} style={[styles.sessionCard, { borderLeftColor: colors.primary, backgroundColor: colors.surface }]}>
@@ -289,27 +309,6 @@ export default function HomeScreen() {
             </View>
           )}
         </View>
-
-        {/* Learning Pulse Card */}
-        <View style={styles.pulseCard}>
-          <View style={styles.pulseHeader}>
-             <Text style={styles.pulseTitle}>Denyut Belajar</Text>
-             <Ionicons name="analytics" size={24} color="#FFF" style={{opacity: 0.6}}/>
-          </View>
-          <Text style={styles.pulseDesc}>Kamu telah menyelesaikan 85% target mingguanmu!</Text>
-          
-          <View style={styles.progressBarRow}>
-            <View style={styles.progressTrack}>
-              <View style={[styles.progressFill, { width: '85%' }]} />
-            </View>
-            <Text style={styles.progressText}>12/14</Text>
-          </View>
-
-          <Text style={styles.pulseNextTarget}>
-            Pencapaian Berikutnya: Selesaikan Modul Python Loops untuk mendapatkan lencana 'Code Ninja'.
-          </Text>
-        </View>
-
       </ScrollView>
     </SafeAreaView>
   );
@@ -646,57 +645,6 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     fontStyle: 'italic',
   },
-  pulseCard: {
-    backgroundColor: '#4F46E5',
-    marginHorizontal: 20,
-    borderRadius: 32,
-    padding: 24,
-    marginBottom: 40,
-  },
-  pulseHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  pulseTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  pulseDesc: {
-    fontSize: 14,
-    color: '#E0E7FF',
-    marginBottom: 20,
-    lineHeight: 20,
-  },
-  progressBarRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  progressTrack: {
-    flex: 1,
-    height: 8,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderRadius: 4,
-    marginRight: 12,
-  },
-  progressFill: {
-    height: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 4,
-  },
-  progressText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 14,
-  },
-  pulseNextTarget: {
-    fontSize: 12,
-    color: '#D8B4FE',
-    lineHeight: 18,
-  },
   emptyContainer: {
     paddingVertical: 20,
     alignItems: 'center',
@@ -737,5 +685,46 @@ const styles = StyleSheet.create({
   aiSearchBtnSub: {
     fontSize: 11,
     fontWeight: '500',
+  },
+  groupCardHome: {
+    width: width * 0.6,
+    borderRadius: 24,
+    padding: 20,
+    marginRight: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.02,
+    shadowRadius: 5,
+    elevation: 1,
+  },
+  groupIconBoxHome: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  groupTitleHome: {
+    fontSize: 15,
+    fontWeight: '800',
+    marginBottom: 4,
+  },
+  groupMetaHome: {
+    fontSize: 11,
+    marginBottom: 12,
+  },
+  groupAvatarsHome: {
+    flexDirection: 'row',
+    height: 24,
+  },
+  miniAvatarHome: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    position: 'absolute',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

@@ -18,6 +18,14 @@ export default defineSchema({
         availability: v.optional(v.string()),
       })
     ),
+    stats: v.optional(
+      v.object({
+        completedSessions: v.number(),
+        totalGoalSessions: v.number(),
+        nextAchievement: v.string(),
+        points: v.number(),
+      })
+    ),
   }).index("by_email", ["email"]),
 
   tutors: defineTable({
@@ -79,4 +87,22 @@ export default defineSchema({
     notes: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_user", ["userId"]),
+
+  notifications: defineTable({
+    userId: v.id("users"),
+    title: v.string(),
+    description: v.string(),
+    type: v.string(), // "booking", "message", "system"
+    read: v.boolean(),
+    createdAt: v.number(),
+  }).index("by_userId", ["userId"]),
+  
+  groups: defineTable({
+    title: v.string(),
+    tutorId: v.id("users"),
+    participants: v.number(),
+    maxParticipants: v.number(),
+    subject: v.string(),
+    createdAt: v.number(),
+  }).index("by_subject", ["subject"]),
 });

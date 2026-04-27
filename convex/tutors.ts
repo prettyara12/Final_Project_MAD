@@ -20,9 +20,50 @@ export const getTutorById = query({
   handler: async (ctx, args) => {
     const tutor = await ctx.db.get(args.id);
     if (!tutor) return null;
-    // Cek jika userId ada sebelum mengambil data user
     const user = tutor.userId ? await ctx.db.get(tutor.userId) : null;
     return { ...tutor, user };
+  },
+});
+
+export const getTutorDetail = query({
+  args: { id: v.string() },
+  handler: async (ctx, args) => {
+    // 1. Cari berdasarkan Tutor ID
+    // Gunakan query + filter agar lebih aman terhadap tipe data di TypeScript
+    let tutor = null;
+    try {
+      tutor = await ctx.db
+        .query("tutors")
+        .filter((q) => q.eq(q.field("_id"), args.id as any))
+        .first();
+    } catch (e) {}
+
+    // 2. Jika tidak ketemu, cari berdasarkan User ID
+    if (!tutor) {
+      try {
+        tutor = await ctx.db
+          .query("tutors")
+          .withIndex("by_userId", (q) => q.eq("userId", args.id as any))
+          .first();
+      } catch (e) {}
+    }
+
+    if (!tutor) return null;
+
+    // 3. Ambil data user terkait
+    let user = null;
+    if (tutor.userId) {
+       user = await ctx.db.get(tutor.userId);
+    }
+    
+    return {
+      ...tutor,
+      user: user ? {
+        _id: user._id,
+        name: user.name,
+        profileImage: (user as any).profileImage,
+      } : null
+    };
   },
 });
 

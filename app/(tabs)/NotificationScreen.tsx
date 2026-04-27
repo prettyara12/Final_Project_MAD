@@ -8,220 +8,79 @@ import {
   TouchableOpacity,
   Platform,
   Alert,
-  Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../context/ThemeContext';
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '../../convex/_generated/api';
+import { useProfile } from '../../context/ProfileContext';
 
-// Types
-interface Notification {
-  id: string;
-  type?: string;
-  title: string;
-  desc: string;
-  badge?: string;
-  iconColor?: string;
-  iconBg?: string;
-  iconName: string;
-  actionPrimary?: string;
-  actionSecondary?: string;
-  timestamp?: string;
-}
+// Helper to format timestamp
+const formatTime = (ts: number) => {
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff / 60000);
+  const hours = Math.floor(mins / 60);
+  const days = Math.floor(hours / 24);
 
-// Mock Data
-const INITIAL_NOTIFICATIONS_NEW: Notification[] = [
-  {
-    id: '1',
-    type: 'session',
-    title: 'Sesi Mendatang: Fisika Kuantum',
-    desc: "Sesi belajar grup 'Mekanika Kuantum Tingkat Lanjut' akan segera dimulai. 4 teman sudah ada di atrium.",
-    badge: '15 mnt tersisa',
-    iconColor: '#4F46E5',
-    iconBg: '#EEF2FF',
-    iconName: 'calendar-outline',
-    actionPrimary: 'Gabung Atrium',
-  },
-  {
-    id: '2',
-    type: 'ai_insight',
-    title: 'Wawasan AI: Pola Belajar',
-    desc: "Saya perhatikan kamu kesulitan dengan 'Proses Stokastik'. Saya telah mengkurasi mikro-modul 10 menit untuk menjembatani kesenjangan tersebut.",
-    badge: 'Wawasan Baru',
-    iconColor: '#9333EA',
-    iconBg: '#F3E8FF',
-    iconName: 'hardware-chip-outline',
-    actionPrimary: 'Tinjau Modul',
-    actionSecondary: 'Mungkin nanti',
-  },
-  {
-    id: '3',
-    type: 'message',
-    title: 'Sarah Jenkins',
-    desc: '"Hei! Aku menemukan makalah tentang Neural Radiance Fields yang kita diskusikan. Aku kirim ke brankas grup sekarang..."',
-    timestamp: '2 jam lalu',
-    iconName: 'person-outline',
+  if (mins < 1) return 'Baru saja';
+  if (mins < 60) return `${mins} mnt lalu`;
+  if (hours < 24) return `${hours} jam lalu`;
+  return `${days} hari lalu`;
+};
+
+// Helper to get icon based on type
+const getIconInfo = (type: string) => {
+  switch (type) {
+    case 'booking': return { name: 'calendar-outline', color: '#4F46E5', bg: '#EEF2FF' };
+    case 'achievement': return { name: 'medal-outline', color: '#F59E0B', bg: '#FEF3C7' };
+    case 'reminder': return { name: 'alarm-outline', color: '#EF4444', bg: '#FEF2F2' };
+    default: return { name: 'notifications-outline', color: '#9333EA', bg: '#F3E8FF' };
   }
-];
-
-const INITIAL_NOTIFICATIONS_OLD: Notification[] = [
-  {
-    id: '4',
-    title: 'Pencapaian Mingguan Tercapai',
-    desc: 'Kamu telah menyelesaikan 15 jam belajar fokus minggu ini. Top 5% dari kohortmu!',
-    iconName: 'checkmark-circle-outline',
-  },
-  {
-    id: '5',
-    title: 'Nilai Baru Tersedia',
-    desc: 'Hasil Kuis Persamaan Diferensial #4 telah dipublikasikan. Klik untuk melihat rincian.',
-    iconName: 'document-text-outline',
-  }
-];
+};
 
 export default function NotificationScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const { profileData } = useProfile();
 
-  // State management
+  // Convex Integration
+  const user = useQuery(api.users.getUserByEmail, { email: profileData.email });
+  const notifications = useQuery(api.notifications.getNotifications, 
+    user ? { userId: user._id } : "skip"
+  );
+  const markAsRead = useMutation(api.notifications.markAsRead);
+  const markAllAsRead = useMutation(api.notifications.markAllAsRead);
+
   const [silentMode, setSilentMode] = useState(false);
-  const [newNotifications, setNewNotifications] = useState<Notification[]>(INITIAL_NOTIFICATIONS_NEW);
-  const [oldNotifications, setOldNotifications] = useState<Notification[]>(INITIAL_NOTIFICATIONS_OLD);
-  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
 
-  // Mark all as read — moves all new notifications to old
-  const handleMarkAllRead = useCallback(() => {
+  const newNotifications = notifications?.filter(n => !n.read) || [];
+  const oldNotifications = notifications?.filter(n => n.read) || [];
+
+  const handleMarkAllRead = useCallback(async () => {
+    if (!user) return;
     if (newNotifications.length === 0) {
       Alert.alert('Info', 'Tidak ada notifikasi baru untuk ditandai.');
       return;
     }
-    Alert.alert(
-      'Tandai Semua Dibaca',
-      'Semua notifikasi baru akan ditandai sebagai telah dibaca.',
-      [
-        { text: 'Batal', style: 'cancel' },
-        {
-          text: 'Ya, Tandai',
-          onPress: () => {
-            // Move all new notifications to old (read) list
-            const movedNotifs = newNotifications.map(n => ({
-              ...n,
-              badge: undefined,
-              timestamp: undefined,
-              actionPrimary: undefined,
-              actionSecondary: undefined,
-            }));
-            setOldNotifications(prev => [...movedNotifs, ...prev]);
-            setNewNotifications([]);
-          },
-        },
-      ]
-    );
-  }, [newNotifications]);
+    try {
+      await markAllAsRead({ userId: user._id });
+      Alert.alert('Sukses', 'Semua notifikasi ditandai sebagai dibaca.');
+    } catch (e) {
+      Alert.alert('Error', 'Gagal memperbarui notifikasi.');
+    }
+  }, [user, newNotifications, markAllAsRead]);
 
-  // Toggle silent mode
   const handleToggleSilentMode = useCallback(() => {
-    const newState = !silentMode;
-    setSilentMode(newState);
-    if (newState) {
-      Alert.alert(
-        '🔕 Mode Senyap Aktif',
-        'Semua notifikasi dibisukan selama 2 jam ke depan. Fokus belajarmu tidak akan terganggu!',
-        [{ text: 'Oke, Lanjut Fokus!' }]
-      );
-    } else {
-      Alert.alert(
-        '🔔 Mode Senyap Dinonaktifkan',
-        'Notifikasi kembali aktif. Kamu akan menerima alert seperti biasa.',
-        [{ text: 'Mengerti' }]
-      );
-    }
-  }, [silentMode]);
-
-  // Handle primary action button
-  const handlePrimaryAction = useCallback((notif: Notification) => {
-    switch (notif.type) {
-      case 'session':
-        Alert.alert('Gabung Atrium', `Menghubungkan ke sesi "${notif.title}"...`, [
-          { text: 'Batal', style: 'cancel' },
-          { text: 'Gabung Sekarang', onPress: () => {
-            // Remove from new notifications after action
-            setNewNotifications(prev => prev.filter(n => n.id !== notif.id));
-            Alert.alert('✅ Berhasil', 'Kamu telah bergabung ke atrium sesi!');
-          }},
-        ]);
-        break;
-      case 'ai_insight':
-        Alert.alert('Tinjau Modul', 'Membuka mikro-modul yang dikurasi AI...', [
-          { text: 'Batal', style: 'cancel' },
-          { text: 'Buka Modul', onPress: () => {
-            setNewNotifications(prev => prev.filter(n => n.id !== notif.id));
-            Alert.alert('📚 Modul Dibuka', 'Mikro-modul Proses Stokastik siap dipelajari!');
-          }},
-        ]);
-        break;
-      default:
-        Alert.alert('Aksi', `Menjalankan: ${notif.actionPrimary}`);
-    }
+    setSilentMode(prev => !prev);
   }, []);
 
-  // Handle secondary action (dismiss / later)
-  const handleSecondaryAction = useCallback((notif: Notification) => {
-    Alert.alert(
-      'Tunda Notifikasi',
-      'Notifikasi ini akan dipindahkan ke daftar terbaca.',
-      [
-        { text: 'Batal', style: 'cancel' },
-        {
-          text: 'Ya, Nanti Saja',
-          onPress: () => {
-            setNewNotifications(prev => prev.filter(n => n.id !== notif.id));
-            setOldNotifications(prev => [{
-              ...notif,
-              badge: undefined,
-              actionPrimary: undefined,
-              actionSecondary: undefined,
-            }, ...prev]);
-          },
-        },
-      ]
-    );
-  }, []);
-
-  // Handle notification card press (mark single as read)
-  const handleNotifPress = useCallback((notif: Notification, isNew: boolean) => {
-    if (isNew) {
-      Alert.alert(
-        notif.title,
-        notif.desc,
-        [
-          { text: 'Tutup' },
-          { text: 'Tandai Dibaca', onPress: () => {
-            setNewNotifications(prev => prev.filter(n => n.id !== notif.id));
-            setOldNotifications(prev => [{
-              ...notif,
-              badge: undefined,
-              actionPrimary: undefined,
-              actionSecondary: undefined,
-            }, ...prev]);
-          }},
-        ]
-      );
-    } else {
-      Alert.alert(notif.title, notif.desc, [{ text: 'Tutup' }]);
+  const handleNotifPress = useCallback(async (notif: any) => {
+    if (!notif.read) {
+      await markAsRead({ id: notif._id });
     }
-  }, []);
-
-  // Handle old notification press
-  const handleOldNotifPress = useCallback((notif: Notification) => {
-    if (notif.title === 'Nilai Baru Tersedia') {
-      Alert.alert('📊 Nilai Kuis', 'Skor kamu: 92/100\nPeringkat: 3 dari 45 mahasiswa\n\nHebat! Kamu di atas rata-rata kelas.', [{ text: 'Tutup' }]);
-    } else if (notif.title === 'Pencapaian Mingguan Tercapai') {
-      Alert.alert('🏆 Pencapaian', 'Total jam fokus: 15 jam\nTarget tercapai: 100%\nPeringkat kohort: Top 5%\n\nPertahankan konsistensimu!', [{ text: 'Luar Biasa!' }]);
-    } else {
-      Alert.alert(notif.title, notif.desc, [{ text: 'Tutup' }]);
-    }
-  }, []);
+    Alert.alert(notif.title, notif.description, [{ text: 'Tutup' }]);
+  }, [markAsRead]);
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
@@ -280,91 +139,38 @@ export default function NotificationScreen() {
              <Text style={styles.markReadText}>Tandai semua telah dibaca</Text>
            </TouchableOpacity>
         </View>
-
         {/* New Notifications */}
         {newNotifications.length > 0 ? (
           <View style={styles.notifList}>
-             {newNotifications.map(notif => (
-               <TouchableOpacity 
-                 key={notif.id} 
-                 style={[styles.cardUnread, { backgroundColor: colors.card, borderColor: colors.border }]}
-                 activeOpacity={0.7}
-                 onPress={() => handleNotifPress(notif, true)}
-               >
-                  
-                  <View style={styles.cardHeaderRow}>
-                     {notif.type === 'message' ? (
-                       <View style={styles.userAvatarBox}>
-                          <Ionicons name="person" size={20} color="#FFF" />
-                          <View style={styles.onlineDot} />
-                       </View>
-                     ) : (
-                       <View style={[styles.iconBox, { backgroundColor: notif.iconBg || colors.primaryLight }]}>
-                          <Ionicons name={notif.iconName as any} size={20} color={notif.iconColor || colors.primary} />
-                       </View>
-                     )}
-                     
-                     <View style={styles.cardTitleContainer}>
-                        <Text style={[styles.cardTitle, { color: colors.text }]}>{notif.title}</Text>
-                     </View>
-                     
-                     {notif.badge && (
-                       <View style={[
-                         styles.cardBadge,
-                         notif.type === 'session' && styles.cardBadgeUrgent,
-                       ]}>
-                          <Text style={[
-                            styles.cardBadgeText,
-                            notif.type === 'session' && styles.cardBadgeTextUrgent,
-                          ]}>{notif.badge}</Text>
-                       </View>
-                     )}
+             {newNotifications.map(notif => {
+               const iconInfo = getIconInfo(notif.type);
+               return (
+                <TouchableOpacity 
+                  key={notif._id} 
+                  style={[styles.cardUnread, { backgroundColor: colors.card, borderColor: colors.border }]}
+                  activeOpacity={0.7}
+                  onPress={() => handleNotifPress(notif)}
+                >
+                   <View style={styles.cardHeaderRow}>
+                      <View style={[styles.iconBox, { backgroundColor: iconInfo.bg }]}>
+                         <Ionicons name={iconInfo.name as any} size={20} color={iconInfo.color} />
+                      </View>
+                      
+                      <View style={styles.cardTitleContainer}>
+                         <Text style={[styles.cardTitle, { color: colors.text }]}>{notif.title}</Text>
+                      </View>
+                      
+                      <Text style={[styles.cardTimestamp, { color: colors.textSecondary }]}>
+                        {formatTime(notif.createdAt)}
+                      </Text>
+                   </View>
 
-                     {notif.timestamp && (
-                       <Text style={[styles.cardTimestamp, { color: colors.textSecondary }]}>{notif.timestamp}</Text>
-                     )}
-                  </View>
-
-                  <Text style={[
-                    styles.cardDesc, 
-                    { color: colors.textSecondary },
-                    notif.type === 'message' && styles.italicDesc
-                  ]}>
-                     {notif.desc}
-                  </Text>
-
-                  {/* Actions */}
-                  {notif.actionPrimary && (
-                     <View style={styles.cardActionsRow}>
-                        <TouchableOpacity 
-                          style={[
-                            styles.primaryActionBtn, 
-                            notif.type === 'ai_insight' ? styles.primaryActionLight : styles.primaryActionDark
-                          ]}
-                          onPress={() => handlePrimaryAction(notif)}
-                          activeOpacity={0.7}
-                        >
-                           <Text style={[
-                              styles.primaryActionText,
-                              notif.type === 'ai_insight' ? { color: '#9333EA' } : { color: '#FFF' }
-                           ]}>
-                              {notif.actionPrimary}
-                           </Text>
-                        </TouchableOpacity>
-
-                        {notif.actionSecondary && (
-                          <TouchableOpacity 
-                            style={styles.secondaryActionBtn}
-                            onPress={() => handleSecondaryAction(notif)}
-                            activeOpacity={0.6}
-                          >
-                             <Text style={styles.secondaryActionText}>{notif.actionSecondary}</Text>
-                          </TouchableOpacity>
-                        )}
-                     </View>
-                  )}
-               </TouchableOpacity>
-             ))}
+                   <Text style={[styles.cardDesc, { color: colors.textSecondary }]}>
+                      {notif.description}
+                   </Text>
+                </TouchableOpacity>
+               );
+             })}
           </View>
         ) : (
           <View style={styles.emptyNewBox}>
@@ -381,26 +187,32 @@ export default function NotificationScreen() {
 
         {/* Old Notifications */}
         <View style={styles.notifList}>
-           {oldNotifications.map(notif => (
-             <TouchableOpacity 
-               key={notif.id} 
-               style={[styles.cardRead, { backgroundColor: colors.card, borderBottomColor: colors.border }]}
-               activeOpacity={0.7}
-               onPress={() => handleOldNotifPress(notif)}
-             >
-                <View style={styles.cardHeaderRow}>
-                   <View style={[styles.iconBoxRead, { backgroundColor: colors.border + '40' }]}>
-                      <Ionicons name={(notif.iconName || 'notifications-outline') as any} size={18} color={colors.textSecondary} />
-                   </View>
-                   
-                   <View style={styles.cardTitleContainer}>
-                      <Text style={[styles.cardTitleRead, { color: colors.textSecondary }]}>{notif.title}</Text>
-                   </View>
-                   <Ionicons name="chevron-forward" size={16} color={colors.border} />
-                </View>
-                <Text style={[styles.cardDescRead, { color: colors.textSecondary }]}>{notif.desc}</Text>
-             </TouchableOpacity>
-           ))}
+           {oldNotifications.map(notif => {
+             const iconInfo = getIconInfo(notif.type);
+             return (
+              <TouchableOpacity 
+                key={notif._id} 
+                style={[styles.cardRead, { backgroundColor: colors.card, borderBottomColor: colors.border }]}
+                activeOpacity={0.7}
+                onPress={() => handleNotifPress(notif)}
+              >
+                 <View style={styles.cardHeaderRow}>
+                    <View style={[styles.iconBoxRead, { backgroundColor: colors.border + '40' }]}>
+                       <Ionicons name={iconInfo.name as any} size={18} color={colors.textSecondary} />
+                    </View>
+                    
+                    <View style={styles.cardTitleContainer}>
+                       <Text style={[styles.cardTitleRead, { color: colors.textSecondary }]}>{notif.title}</Text>
+                    </View>
+                    <Text style={[styles.cardTimestamp, { color: colors.textSecondary, fontSize: 9 }]}>
+                      {formatTime(notif.createdAt)}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.border} />
+                 </View>
+                 <Text style={[styles.cardDescRead, { color: colors.textSecondary }]}>{notif.description}</Text>
+              </TouchableOpacity>
+             );
+           })}
         </View>
 
         {/* Silent Mode / Deep Work Card */}
