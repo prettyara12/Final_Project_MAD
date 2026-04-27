@@ -91,10 +91,7 @@ export default function NotificationScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
              <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          <View style={[styles.avatarMini, { backgroundColor: colors.avatarBg }]}>
-            <Ionicons name="person" size={16} color="#FFF" />
-          </View>
-          <Text style={[styles.headerLogoText, { color: colors.primary }]}>EduPartner AI</Text>
+          <Text style={[styles.headerLogoText, { color: colors.primary, marginLeft: 8 }]}>EduPartner AI</Text>
         </View>
         <TouchableOpacity 
           style={styles.notificationBtn}

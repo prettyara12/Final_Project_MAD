@@ -11,15 +11,24 @@ import {
   ActivityIndicator
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../../context/ThemeContext';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
+import { getTutorRecommendation } from '../../services/gemini';
 
 export default function TutorListScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const params = useLocalSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
+  const [aiInsights, setAiInsights] = useState<any[] | null>(null);
+
+  React.useEffect(() => {
+    if (params.subject && typeof params.subject === 'string') {
+      setSearchQuery(params.subject);
+    }
+  }, [params.subject]);
 
   // Convex Integration
   const tutors = useQuery(api.tutors.getTutors);
@@ -35,6 +44,26 @@ export default function TutorListScreen() {
     router.push({ pathname: '/TutorProfileScreen', params: { id } } as any);
   };
 
+  // Run AI recommendation when tutors load or search query changes significantly
+  React.useEffect(() => {
+    if (tutors && tutors.length > 0 && searchQuery.length > 2) {
+      const timeout = setTimeout(() => {
+        getTutorRecommendation({ 
+          subject: searchQuery, 
+          preferredTime: "Kapan saja", 
+          learningStyle: "Bebas" 
+        }, filteredTutors || tutors).then(res => {
+          if (res) setAiInsights(res);
+        });
+      }, 1000); // debounce
+      return () => clearTimeout(timeout);
+    }
+  }, [tutors, searchQuery]);
+
+  const getTutorInsight = (id: string) => {
+    return aiInsights?.find(insight => insight.tutorId === id);
+  };
+
   const renderTutorCard = ({ item }: { item: any }) => (
     <TouchableOpacity 
       style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]} 
@@ -47,10 +76,14 @@ export default function TutorListScreen() {
           <View style={styles.onlineDot} />
         </View>
         
-        <View style={[styles.badgeContainer, { backgroundColor: colors.primaryLight }]}>
-          <Ionicons name="sparkles" size={12} color={colors.primary} />
-          <Text style={[styles.badgeText, { color: colors.primary }]}>AI RECOMMENDED</Text>
-        </View>
+        {getTutorInsight(item._id) && (
+          <View style={[styles.badgeContainer, { backgroundColor: colors.primaryLight }]}>
+            <Ionicons name="sparkles" size={12} color={colors.primary} />
+            <Text style={[styles.badgeText, { color: colors.primary }]}>
+              {getTutorInsight(item._id)?.score ? `MATCH ${getTutorInsight(item._id)?.score}%` : 'AI RECOMMENDED'}
+            </Text>
+          </View>
+        )}
       </View>
       
       <Text style={[styles.name, { color: colors.text }]}>{item.user?.name || item.name}</Text>

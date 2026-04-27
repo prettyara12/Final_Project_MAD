@@ -33,7 +33,6 @@ export async function getGeminiResponse(userMessage: string, history: { role: "u
   }
 
   try {
-    // Gunakan model yang stabil: gemini-1.5-flash-latest
     const model = genAI.getGenerativeModel({
       model: "gemma-3-27b-it"
     });
@@ -149,6 +148,61 @@ ${tutors.map(t => `- ID: ${t._id}, Name: ${t.user?.name || t.name}, Subjects: ${
     return JSON.parse(text);
   } catch (error) {
     console.error("Gemini Recommendation Error:", error);
+    return null;
+  }
+}
+
+export async function generateStudyPlan(subject: string, goal: string, hoursPerDay: number, durationDays: number) {
+  if (!API_KEY) {
+    console.error("Gemini API Key is missing!");
+    return null;
+  }
+
+  const prompt = `You are an expert AI Study Planner. Create a highly structured, day-by-day study plan for a student.
+  
+  Student Parameters:
+  - Subject: ${subject}
+  - Goal: ${goal}
+  - Available Time: ${hoursPerDay} hours per day
+  - Duration: ${durationDays} days
+  
+  Rules:
+  1. Return ONLY valid JSON, no markdown formatting (do not wrap in \`\`\`json).
+  2. The JSON structure MUST exactly match:
+  {
+    "title": "Study Plan for [Subject]",
+    "overview": "Brief 1-sentence motivation/overview",
+    "days": [
+      {
+        "dayNumber": 1,
+        "title": "Focus of the day",
+        "topics": ["Topic 1", "Topic 2"],
+        "estimatedHours": 2
+      }
+    ]
+  }
+  3. Ensure there are exactly ${durationDays} items in the "days" array.
+  `;
+
+  try {
+    const model = genAI.getGenerativeModel({
+      model: "gemma-3-27b-it"
+    });
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error("Request Timeout")), 15000);
+    });
+
+    const result = await Promise.race([
+      model.generateContent(prompt),
+      timeoutPromise
+    ]);
+    const response = await result.response;
+    let text = response.text();
+    text = text.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
+    return JSON.parse(text);
+  } catch (error) {
+    console.error("Gemini Study Planner Error:", error);
     return null;
   }
 }

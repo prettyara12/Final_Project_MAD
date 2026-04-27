@@ -40,6 +40,8 @@ export default function HomeScreen() {
     (currentUser && currentUser.role) ? { userId: currentUser._id, role: currentUser.role as "tutor" | "learner" } : "skip"
   );
   
+  const notifications = useQuery(api.notifications.getNotifications, currentUser?._id ? { userId: currentUser._id } : "skip");
+  const unreadCount = notifications ? notifications.filter((n: any) => !n.read).length : 0;
 
   // AI Recommendation Integration
   const recommendedTutors = useQuery(api.tutors.getRecommendedTutors, {
@@ -92,14 +94,26 @@ export default function HomeScreen() {
       
       {/* Top Fixed Header */}
       <View style={[styles.header, { backgroundColor: colors.background }]}>
-        <View style={styles.headerLeft}>
-          <View style={[styles.avatarMini, { backgroundColor: colors.avatarBg }]}>
-            <Ionicons name="person" size={16} color="#FFF" />
+        <TouchableOpacity 
+          style={styles.headerLeft}
+          onPress={() => router.push('/ProfileScreen' as any)}
+        >
+          <View style={[styles.avatarMini, { backgroundColor: colors.avatarBg, overflow: 'hidden' }]}>
+            {profileData?.profileImage ? (
+              <Image source={{ uri: profileData.profileImage }} style={{ width: '100%', height: '100%' }} />
+            ) : (
+              <Ionicons name="person" size={16} color="#FFF" />
+            )}
           </View>
           <Text style={[styles.headerLogoText, { color: colors.primary }]}>EduPartner AI</Text>
-        </View>
-        <TouchableOpacity style={styles.notificationBtn} onPress={() => router.push('/NotificationScreen' as any)}>
+        </TouchableOpacity>
+        <TouchableOpacity style={[styles.notificationBtn, { position: 'relative' }]} onPress={() => router.push('/NotificationScreen' as any)}>
           <Ionicons name="notifications" size={20} color={colors.textSecondary} />
+          {unreadCount > 0 && (
+            <View style={styles.notifBadge}>
+               <Text style={styles.notifBadgeText}>{unreadCount}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -143,6 +157,23 @@ export default function HomeScreen() {
               </View>
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.primary} />
+          </TouchableOpacity>
+
+          {/* AI Study Planner Entry Point */}
+          <TouchableOpacity 
+            style={[styles.aiSearchBtn, { backgroundColor: colors.surfaceHover, borderColor: colors.border, marginTop: 12 }]}
+            onPress={() => router.push('/StudyPlannerScreen' as any)}
+          >
+            <View style={styles.aiSearchBtnLeft}>
+              <View style={[styles.aiSearchIconBox, { backgroundColor: '#F59E0B' }]}>
+                <Ionicons name="calendar" size={20} color="#FFF" />
+              </View>
+              <View>
+                <Text style={[styles.aiSearchBtnTitle, { color: colors.text }]}>AI Study Planner</Text>
+                <Text style={[styles.aiSearchBtnSub, { color: colors.textSecondary }]}>Buat jadwal belajar otomatis</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
@@ -599,6 +630,30 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.02,
     shadowRadius: 5,
     elevation: 1,
+  },
+  notificationBtn: {
+    padding: 8,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+  },
+  notifBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#EF4444',
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: '#FFF',
+  },
+  notifBadgeText: {
+    color: '#FFF',
+    fontSize: 9,
+    fontWeight: 'bold',
   },
   sessionDateCircle: {
     width: 44,

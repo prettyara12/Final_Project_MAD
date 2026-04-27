@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../context/ThemeContext';
 import { useProfile } from '../../context/ProfileContext';
 import { useMutation, useQuery } from 'convex/react';
@@ -28,7 +29,11 @@ export default function ProfileScreen() {
   const { profileData, updateProfile: updateLocalProfile, clearProfile } = useProfile();
   
   // Convex Integration
-  const currentUser = useQuery(api.users.getUserByEmail, { email: profileData.email });
+  const userQuery = useQuery(api.users.getUserByEmail, profileData?.email ? { email: profileData.email } : "skip");
+  const currentUser = userQuery;
+
+  const notifications = useQuery(api.notifications.getNotifications, currentUser?._id ? { userId: currentUser._id } : "skip");
+  const unreadCount = notifications ? notifications.filter((n: any) => !n.read).length : 0;
   const updateBackendProfile = useMutation(api.users.updateUser);
 
   // Modal states
@@ -59,6 +64,31 @@ export default function ProfileScreen() {
       });
     }
   }, [personalInfoVisible, currentUser, profileData]);
+
+  const handlePickImage = async () => {
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.5,
+      base64: true,
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const base64Image = `data:image/jpeg;base64,${result.assets[0].base64}`;
+      updateLocalProfile({ profileImage: base64Image });
+      if (currentUser) {
+        try {
+          await updateBackendProfile({ id: currentUser._id, profileImage: base64Image });
+          Alert.alert("✅ Berhasil", "Foto profil berhasil diubah!");
+        } catch (e) {
+          Alert.alert("Error", "Gagal menyimpan foto ke server.");
+        }
+      } else {
+        Alert.alert("✅ Berhasil", "Foto profil berhasil diubah!");
+      }
+    }
+  };
 
 
   // Security and Theme States
@@ -127,16 +157,18 @@ export default function ProfileScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
              <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          <View style={[styles.avatarMini, { backgroundColor: colors.avatarBg }]}>
-            <Ionicons name="person" size={16} color="#FFF" />
-          </View>
-          <Text style={[styles.headerLogoText, { color: colors.primary }]}>EduPartner AI</Text>
+          <Text style={[styles.headerLogoText, { color: colors.primary, marginLeft: 8 }]}>EduPartner AI</Text>
         </View>
         <TouchableOpacity 
-          style={styles.notificationBtn}
+          style={[styles.notificationBtn, { position: 'relative' }]}
           onPress={() => router.push('/NotificationScreen' as any)}
         >
           <Ionicons name="notifications" size={20} color={colors.textSecondary} />
+          {unreadCount > 0 && (
+            <View style={styles.notifBadge}>
+               <Text style={styles.notifBadgeText}>{unreadCount}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
@@ -153,8 +185,8 @@ export default function ProfileScreen() {
                     )}
                  </View>
               </View>
-              <TouchableOpacity style={[styles.editBadge, { backgroundColor: colors.primary }]}>
-                 <Ionicons name="pencil" size={12} color="#FFF" />
+              <TouchableOpacity style={[styles.editBadge, { backgroundColor: colors.primary }]} onPress={handlePickImage}>
+                 <Ionicons name="camera" size={14} color="#FFF" />
               </TouchableOpacity>
            </View>
 
@@ -299,7 +331,30 @@ const styles = StyleSheet.create({
   backButton: { marginRight: 10, padding: 4 },
   avatarMini: { width: 28, height: 28, borderRadius: 14, justifyContent: 'center', alignItems: 'center', marginRight: 8 },
   headerLogoText: { fontSize: 16, fontWeight: '700' },
-  notificationBtn: { padding: 8 },
+  notificationBtn: {
+    padding: 8,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+  },
+  notifBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#EF4444',
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 2,
+    borderColor: '#FFF',
+  },
+  notifBadgeText: {
+    color: '#FFF',
+    fontSize: 9,
+    fontWeight: 'bold',
+  },
   scrollContent: { paddingBottom: 30 },
   profileCard: { marginHorizontal: 20, borderRadius: 32, padding: 24, alignItems: 'center', marginBottom: 24, elevation: 3 },
   avatarContainer: { position: 'relative', marginBottom: 16 },
