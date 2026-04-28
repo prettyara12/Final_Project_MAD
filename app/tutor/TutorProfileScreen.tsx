@@ -97,7 +97,10 @@ export default function TutorProfileScreen() {
             <View style={[styles.menuIcon, { backgroundColor: colors.primaryLight }]}>
               <Ionicons name="person-outline" size={20} color={colors.primary} />
             </View>
-            <Text style={[styles.menuText, { color: colors.text }]}>Edit Profil</Text>
+            <View style={styles.menuTextCol}>
+              <Text style={[styles.menuText, { color: colors.text }]}>Edit Profil</Text>
+              <Text style={[styles.menuSubText, { color: colors.textMuted }]}>Nama, Foto, Bio & Keahlian</Text>
+            </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </TouchableOpacity>
 
@@ -105,7 +108,10 @@ export default function TutorProfileScreen() {
             <View style={[styles.menuIcon, { backgroundColor: colors.successLight }]}>
               <Ionicons name="book-outline" size={20} color={colors.success} />
             </View>
-            <Text style={[styles.menuText, { color: colors.text }]}>Subjek Saya</Text>
+            <View style={styles.menuTextCol}>
+              <Text style={[styles.menuText, { color: colors.text }]}>Subjek Saya</Text>
+              <Text style={[styles.menuSubText, { color: colors.textMuted }]}>Kelola mata pelajaran yang diajar</Text>
+            </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </TouchableOpacity>
 
@@ -113,31 +119,49 @@ export default function TutorProfileScreen() {
             <View style={[styles.menuIcon, { backgroundColor: '#FFF7ED' }]}>
               <Ionicons name="time-outline" size={20} color="#EA580C" />
             </View>
-            <Text style={[styles.menuText, { color: colors.text }]}>Ketersediaan</Text>
-            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-          </TouchableOpacity>
-
-          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/tutor/TutorSessionsScreen' as any)}>
-            <View style={[styles.menuIcon, { backgroundColor: '#FDF2F8' }]}>
-              <Ionicons name="calendar-outline" size={20} color="#DB2777" />
+            <View style={styles.menuTextCol}>
+              <Text style={[styles.menuText, { color: colors.text }]}>Ketersediaan</Text>
+              <Text style={[styles.menuSubText, { color: colors.textMuted }]}>Atur jadwal jam mengajar Anda</Text>
             </View>
-            <Text style={[styles.menuText, { color: colors.text }]}>Sesi Saya</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.menuItem} onPress={() => router.push('/tutor/SettingsScreen' as any)}>
+          <TouchableOpacity style={[styles.menuItem, { borderBottomWidth: 0 }]} onPress={() => router.push('/tutor/SettingsScreen' as any)}>
             <View style={[styles.menuIcon, { backgroundColor: colors.surfaceHover }]}>
               <Ionicons name="settings-outline" size={20} color={colors.textSecondary} />
             </View>
-            <Text style={[styles.menuText, { color: colors.text }]}>Pengaturan</Text>
+            <View style={styles.menuTextCol}>
+              <Text style={[styles.menuText, { color: colors.text }]}>Pengaturan</Text>
+              <Text style={[styles.menuSubText, { color: colors.textMuted }]}>Notifikasi, Keamanan & Akun</Text>
+            </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </TouchableOpacity>
+        </View>
+
+        {/* About EduPartner Section (Matches Learner Style) */}
+        <View style={styles.aboutSectionWrapper}>
+           <Text style={[styles.sectionTitleLabel, { color: colors.textSecondary }]}>Lainnya</Text>
+           <View style={[styles.aboutCardGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <TouchableOpacity 
+                style={styles.aboutMenuItem}
+                onPress={() => router.push('/about' as any)}
+              >
+                 <View style={[styles.aboutIconBg, { backgroundColor: colors.background }]}>
+                    <Ionicons name="information-circle-outline" size={22} color={colors.primary} />
+                 </View>
+                 <View style={styles.aboutTextCol}>
+                    <Text style={[styles.aboutItemTitle, { color: colors.text }]}>Tentang EduPartner AI</Text>
+                    <Text style={[styles.aboutItemSub, { color: colors.textMuted }]}>Versi 2.0.4 Premium</Text>
+                 </View>
+                 <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+              </TouchableOpacity>
+           </View>
         </View>
 
         {/* Logout Button */}
         <TouchableOpacity style={[styles.logoutBtn, { backgroundColor: colors.dangerLight }]} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={20} color={colors.danger} />
-          <Text style={[styles.logoutText, { color: colors.danger }]}>Keluar</Text>
+          <Text style={[styles.logoutText, { color: colors.danger }]}>Keluar Akun</Text>
         </TouchableOpacity>
 
       </ScrollView>
@@ -273,25 +297,72 @@ const styles = StyleSheet.create({
     marginRight: 14,
   },
   menuText: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '700',
     color: '#111827',
+  },
+  menuTextCol: {
+    flex: 1,
+  },
+  menuSubText: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  aboutSectionWrapper: {
+    paddingHorizontal: 20,
+    marginTop: 28,
+  },
+  sectionTitleLabel: {
+    fontSize: 13,
+    fontWeight: '800',
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+  },
+  aboutCardGroup: {
+    borderRadius: 24,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  aboutMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+  },
+  aboutIconBg: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  aboutTextCol: {
+    flex: 1,
+  },
+  aboutItemTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  aboutItemSub: {
+    fontSize: 12,
+    marginTop: 2,
   },
   logoutBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: 20,
-    marginTop: 24,
-    paddingVertical: 16,
-    borderRadius: 16,
+    marginTop: 32,
+    marginBottom: 40,
+    paddingVertical: 18,
+    borderRadius: 24,
     backgroundColor: '#FEF2F2',
     gap: 8,
   },
   logoutText: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '800',
     color: '#EF4444',
   },
 });
