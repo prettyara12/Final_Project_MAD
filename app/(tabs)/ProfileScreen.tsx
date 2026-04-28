@@ -100,7 +100,7 @@ export default function ProfileScreen() {
       { text: "Batal", style: 'cancel' },
       { text: "Keluar", style: 'destructive', onPress: () => {
         clearProfile();
-        router.push('/OnboardingScreen' as any);
+        router.replace('/login' as any);
       } }
     ]);
   }, [router, clearProfile]);

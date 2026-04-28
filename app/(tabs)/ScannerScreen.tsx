@@ -104,14 +104,6 @@ export default function ScannerScreen() {
   };
 
   // Mock OCR: In production, replace with a real OCR API (Google Cloud Vision, etc.)
-  const handleMockOCR = () => {
-    setExtractedText('');
-    Alert.alert(
-      'Mode Input Teks',
-      'Fitur OCR otomatis membutuhkan API khusus. Silakan ketik/paste teks yang terlihat pada gambar secara manual di kolom teks yang disediakan.',
-      [{ text: 'OK' }]
-    );
-  };
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
@@ -209,9 +201,6 @@ export default function ScannerScreen() {
                 <Ionicons name="document-text" size={18} color={colors.primary} />
                 <Text style={[styles.textSectionTitle, { color: colors.text }]}>Catatan atau Instruksi</Text>
               </View>
-              <TouchableOpacity onPress={handleMockOCR}>
-                <Text style={[styles.ocrBtn, { color: colors.primary }]}>Auto-detect</Text>
-              </TouchableOpacity>
             </View>
             <TextInput
               style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
