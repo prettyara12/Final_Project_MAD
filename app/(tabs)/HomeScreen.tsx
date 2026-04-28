@@ -341,6 +341,15 @@ export default function HomeScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* AI Scanner Bubble Button */}
+      <TouchableOpacity 
+        style={[styles.scannerBubble, { backgroundColor: '#3B82F6' }]}
+        onPress={() => router.push('/ScannerScreen' as any)}
+        activeOpacity={0.9}
+      >
+        <Ionicons name="scan" size={24} color="#FFF" />
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -372,9 +381,6 @@ const styles = StyleSheet.create({
   headerLogoText: {
     fontSize: 18,
     fontWeight: '800',
-  },
-  notificationBtn: {
-    padding: 2,
   },
   scrollContent: {
     paddingBottom: 30,
@@ -781,5 +787,21 @@ const styles = StyleSheet.create({
     position: 'absolute',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  scannerBubble: {
+    position: 'absolute',
+    bottom: 30,
+    right: 24,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#3B82F6',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+    zIndex: 999,
   },
 });

@@ -44,6 +44,22 @@ export default function TutorListScreen() {
     router.push({ pathname: '/TutorProfileScreen', params: { id } } as any);
   };
 
+  // Sort tutors based on AI Rank
+  const sortedTutors = React.useMemo(() => {
+    if (!filteredTutors) return [];
+    if (!aiInsights) return filteredTutors;
+
+    return [...filteredTutors].sort((a, b) => {
+      const insightA = aiInsights.find(i => i.tutorId === a._id);
+      const insightB = aiInsights.find(i => i.tutorId === b._id);
+      
+      const rankA = insightA?.rank || 999;
+      const rankB = insightB?.rank || 999;
+      
+      return rankA - rankB;
+    });
+  }, [filteredTutors, aiInsights]);
+
   // Run AI recommendation when tutors load or search query changes significantly
   React.useEffect(() => {
     if (tutors && tutors.length > 0 && searchQuery.length > 2) {
@@ -80,7 +96,7 @@ export default function TutorListScreen() {
           <View style={[styles.badgeContainer, { backgroundColor: colors.primaryLight }]}>
             <Ionicons name="sparkles" size={12} color={colors.primary} />
             <Text style={[styles.badgeText, { color: colors.primary }]}>
-              {getTutorInsight(item._id)?.score ? `MATCH ${getTutorInsight(item._id)?.score}%` : 'AI RECOMMENDED'}
+              {`TOP #${getTutorInsight(item._id)?.rank || '?'}`}
             </Text>
           </View>
         )}
@@ -98,6 +114,14 @@ export default function TutorListScreen() {
           </Text>
         </View>
       </View>
+
+      {getTutorInsight(item._id)?.explanation && (
+        <View style={[styles.insightBox, { backgroundColor: colors.primaryLight + '40' }]}>
+          <Text style={[styles.insightText, { color: colors.text }]}>
+            {getTutorInsight(item._id)?.explanation}
+          </Text>
+        </View>
+      )}
       
       <View style={styles.footerRow}>
         <View style={styles.ratingBox}>
@@ -155,7 +179,7 @@ export default function TutorListScreen() {
         <ActivityIndicator size="large" color="#4F46E5" style={{ marginTop: 40 }} />
       ) : (
         <FlatList 
-          data={filteredTutors}
+          data={sortedTutors}
           keyExtractor={(item) => item._id}
           renderItem={renderTutorCard}
           contentContainerStyle={styles.listContent}
@@ -327,5 +351,17 @@ const styles = StyleSheet.create({
   emptyDesc: {
     fontSize: 13,
     textAlign: 'center',
+  },
+  insightBox: {
+    padding: 12,
+    borderRadius: 16,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#4F46E5',
+  },
+  insightText: {
+    fontSize: 12,
+    lineHeight: 18,
+    fontStyle: 'italic',
   },
 });

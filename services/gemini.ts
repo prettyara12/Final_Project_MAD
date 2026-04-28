@@ -207,3 +207,64 @@ export async function generateStudyPlan(subject: string, goal: string, hoursPerD
   }
 }
 
+export async function analyzeScannedText(scannedText: string, imageBase64?: string) {
+  if (!API_KEY) {
+    console.error("Gemini API Key is missing!");
+    return null;
+  }
+
+  const promptText = `You are EduPartner AI, an expert academic tutor. A student has scanned a page containing study material or questions. 
+  
+  Analyze the provided image and the extracted text. 
+  
+  User Notes/Extracted Text: "${scannedText}"
+
+  Instructions:
+  1. Identify the subject and specific topic from the image/text.
+  2. If there are mathematical problems, equations, or questions in the image, solve them step-by-step with clear explanations.
+  3. Provide a clear and simple explanation of the key concepts shown.
+  4. Suggest related topics the student should study next.
+  5. DO NOT use markdown bolding (double asterisks). Use plain text.
+  6. Respond in Bahasa Indonesia.
+  7. CRITICAL: At the very end of your response, identify the most relevant academic subject in the format: [SUBJECT: Name of Subject]. Example: [SUBJECT: Matematika] or [SUBJECT: Fisika].
+
+  Format your response as plain text with clear sections separated by line breaks.`;
+
+  try {
+    // Menyamakan dengan model yang sudah bekerja di proyek ini
+    const model = genAI.getGenerativeModel({ 
+      model: "gemma-3-27b-it" 
+    });
+    
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error("Request Timeout")), 30000);
+    });
+
+    let result;
+    if (imageBase64) {
+      result = await Promise.race([
+        model.generateContent([
+          { text: promptText },
+          {
+            inlineData: {
+              data: imageBase64,
+              mimeType: "image/jpeg"
+            }
+          }
+        ]),
+        timeoutPromise
+      ]);
+    } else {
+      result = await Promise.race([
+        model.generateContent(promptText),
+        timeoutPromise
+      ]);
+    }
+
+    const response = await result.response;
+    return response.text();
+  } catch (error: any) {
+    console.error("Gemini Scanner Analysis Error (Gemma-3):", error);
+    return "Maaf, terjadi kendala saat menganalisis gambar. Pastikan koneksi internet stabil dan coba lagi.";
+  }
+}
