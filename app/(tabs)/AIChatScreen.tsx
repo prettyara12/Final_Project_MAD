@@ -158,7 +158,7 @@ export default function AIChatScreen() {
             <View
               style={[styles.headerIcon, { backgroundColor: colors.primary }]}
             >
-              <Ionicons name="hardware-chip-outline" size={20} color="#FFF" />
+              <Ionicons name="sparkles" size={20} color="#FFF" />
             </View>
             <View>
               <Text style={[styles.headerTitle, { color: colors.text }]}>EduPartner AI</Text>
