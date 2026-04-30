@@ -2,10 +2,12 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, Keyboard } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 
 export const BottomTabBar: React.FC<BottomTabBarProps> = ({ state, navigation, descriptors }) => {
   const { colors } = useTheme();
+  const { t } = useLanguage();
   const [isKeyboardVisible, setKeyboardVisible] = React.useState(false);
 
   React.useEffect(() => {
@@ -27,11 +29,11 @@ export const BottomTabBar: React.FC<BottomTabBarProps> = ({ state, navigation, d
   if (isKeyboardVisible) return null;
 
   const TABS_CONFIG = [
-    { id: 'HomeScreen', label: 'Beranda', iconActive: 'home', iconInactive: 'home-outline' },
-    { id: 'TutorListScreen', label: 'Cari', iconActive: 'search', iconInactive: 'search-outline' },
-    { id: 'SubjectScreen', label: 'Sesi', iconActive: 'book', iconInactive: 'book-outline' },
-    { id: 'AIChatScreen', label: 'Chat AI', iconActive: 'chatbubbles', iconInactive: 'chatbubbles-outline' },
-    { id: 'ProfileScreen', label: 'Profil', iconActive: 'person', iconInactive: 'person-outline' },
+    { id: 'HomeScreen', label: t('tab_home'), iconActive: 'home', iconInactive: 'home-outline' },
+    { id: 'TutorListScreen', label: t('tab_search'), iconActive: 'search', iconInactive: 'search-outline' },
+    { id: 'SubjectScreen', label: t('tab_sessions'), iconActive: 'book', iconInactive: 'book-outline' },
+    { id: 'AIChatScreen', label: t('tab_chat'), iconActive: 'chatbubbles', iconInactive: 'chatbubbles-outline' },
+    { id: 'ProfileScreen', label: t('tab_profile'), iconActive: 'person', iconInactive: 'person-outline' },
   ] as const;
 
   return (

@@ -8,18 +8,23 @@ import {
   TouchableOpacity,
   TextInput,
   Platform,
-  ActivityIndicator
+  ActivityIndicator,
+  Image
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../../context/ThemeContext';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
+import { useLanguage } from '../../context/LanguageContext';
+import { useProfile } from '../../context/ProfileContext';
 import { getTutorRecommendation } from '../../services/gemini';
 
 export default function TutorListScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const { profileData } = useProfile();
+  const { t, language } = useLanguage();
   const params = useLocalSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [aiInsights, setAiInsights] = useState<any[] | null>(null);
@@ -68,7 +73,7 @@ export default function TutorListScreen() {
           subject: searchQuery, 
           preferredTime: "Kapan saja", 
           learningStyle: "Bebas" 
-        }, filteredTutors || tutors).then(res => {
+        }, filteredTutors || tutors, language as any).then(res => {
           if (res) setAiInsights(res);
         });
       }, 1000); // debounce
@@ -104,13 +109,13 @@ export default function TutorListScreen() {
       
       <Text style={[styles.name, { color: colors.text }]}>{item.user?.name || item.name}</Text>
       <Text style={[styles.subject, { color: colors.textSecondary }]}>
-        {item.subjects ? item.subjects.join(', ') : item.specialization}
+        {item.subjects && item.subjects.length > 0 ? item.subjects.map((s: string) => s ? t(`subject_${s.toLowerCase().replace(/\s+/g, '_')}`) : '').filter(Boolean).join(', ') : (item.specialization || '')}
       </Text>
 
       <View style={styles.categoryRow}>
         <View style={[styles.categoryPill, { backgroundColor: colors.border }]}>
           <Text style={[styles.categoryPillText, { color: colors.textSecondary }]}>
-            {item.subjects ? item.subjects[0] : (item.specialization || "General")}
+            {item.subjects && item.subjects.length > 0 && item.subjects[0] ? t(`subject_${item.subjects[0].toLowerCase().replace(/\s+/g, '_')}`) : (item.specialization || "General")}
           </Text>
         </View>
       </View>
@@ -133,7 +138,7 @@ export default function TutorListScreen() {
           styles.availabilityText, 
           { color: colors.primary }
         ]}>
-          Tersedia Sekarang
+          {t('available_now')}
         </Text>
       </View>
     </TouchableOpacity>
@@ -143,11 +148,25 @@ export default function TutorListScreen() {
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.background }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Tutor Rekomendasi AI</Text>
-        <View style={{ width: 24 }} />
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+            <Ionicons name="arrow-back" size={24} color={colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: colors.text, marginLeft: 8 }]}>{t('find_tutor_ai')}</Text>
+        </View>
+        
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <TouchableOpacity 
+            onPress={() => router.push('/ProfileScreen' as any)}
+            style={[styles.avatarMini, { backgroundColor: colors.avatarBg, overflow: 'hidden' }]}
+          >
+            {profileData?.profileImage ? (
+              <Image source={{ uri: profileData.profileImage }} style={{ width: '100%', height: '100%' }} />
+            ) : (
+              <Ionicons name="person" size={16} color="#FFF" />
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Search Bar */}
@@ -155,7 +174,7 @@ export default function TutorListScreen() {
         <Ionicons name="search" size={20} color={colors.textSecondary} />
         <TextInput
           style={[styles.searchInput, { color: colors.text }]}
-          placeholder="Cari nama tutor atau mata kuliah..."
+          placeholder={t('search_placeholder')}
           placeholderTextColor={colors.textSecondary}
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -170,7 +189,7 @@ export default function TutorListScreen() {
       {/* Results Count */}
       <View style={styles.resultsRow}>
         <Text style={[styles.resultsText, { color: colors.textSecondary }]}>
-          {filteredTutors?.length || 0} tutor ditemukan
+          {filteredTutors?.length || 0} {t('tutor_count')}
         </Text>
       </View>
 
@@ -187,8 +206,8 @@ export default function TutorListScreen() {
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Ionicons name="search-outline" size={48} color={colors.border} />
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>Tidak Ditemukan</Text>
-              <Text style={[styles.emptyDesc, { color: colors.textSecondary }]}>Coba kata kunci lain untuk menemukan tutor.</Text>
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>{t('tutor_not_found')}</Text>
+              <Text style={[styles.emptyDesc, { color: colors.textSecondary }]}>{t('try_another_keyword')}</Text>
             </View>
           }
         />
@@ -211,6 +230,13 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: 4,
+  },
+  avatarMini: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,

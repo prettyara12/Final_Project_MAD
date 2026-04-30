@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../context/ThemeContext';
 import * as ImagePicker from 'expo-image-picker';
+import { useLanguage } from '../../context/LanguageContext';
 import { analyzeScannedText } from '../../services/gemini';
 
 const { width } = Dimensions.get('window');
@@ -24,6 +25,7 @@ const { width } = Dimensions.get('window');
 export default function ScannerScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { t } = useLanguage();
 
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
@@ -34,7 +36,7 @@ export default function ScannerScreen() {
   const handleCamera = async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Izin Diperlukan', 'Aplikasi membutuhkan akses kamera untuk memindai.');
+      Alert.alert(t('error_permission_required'), t('error_camera_access'));
       return;
     }
 
@@ -69,7 +71,7 @@ export default function ScannerScreen() {
 
   const handleAnalyze = async () => {
     if (!extractedText.trim()) {
-      Alert.alert('Teks Kosong', 'Silakan masukkan atau koreksi teks yang terdeteksi sebelum menganalisis.');
+      Alert.alert(t('error_empty_text'), t('error_no_detected_text'));
       return;
     }
 
@@ -86,11 +88,11 @@ export default function ScannerScreen() {
           }
         });
       } else {
-        Alert.alert('Gagal', 'AI tidak dapat menganalisis teks saat ini. Coba lagi.');
+        Alert.alert(t('failed'), t('failed_analyze_alert'));
       }
     } catch (error) {
       console.error(error);
-      Alert.alert('Error', 'Terjadi kesalahan saat menganalisis.');
+      Alert.alert(t('error'), t('error_analyzing'));
     } finally {
       setIsAnalyzing(false);
     }
@@ -112,7 +114,7 @@ export default function ScannerScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>AI Scanner</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('ai_scanner_title')}</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -123,9 +125,9 @@ export default function ScannerScreen() {
             <View style={[styles.iconBox, { backgroundColor: '#DBEAFE' }]}>
               <Ionicons name="scan" size={36} color="#3B82F6" />
             </View>
-            <Text style={[styles.mainTitle, { color: colors.text }]}>Pindai & Analisis</Text>
+            <Text style={[styles.mainTitle, { color: colors.text }]}>{t('scan_analyze')}</Text>
             <Text style={[styles.subTitle, { color: colors.textSecondary }]}>
-              Ambil foto soal, catatan, atau materi pelajaran dan biarkan AI menjelaskannya untukmu.
+              {t('scanner_desc')}
             </Text>
           </View>
 
@@ -139,9 +141,9 @@ export default function ScannerScreen() {
               <Ionicons name="camera" size={28} color="#4F46E5" />
             </View>
             <View style={styles.actionTextBox}>
-              <Text style={[styles.actionTitle, { color: colors.text }]}>Buka Kamera</Text>
+              <Text style={[styles.actionTitle, { color: colors.text }]}>{t('open_camera')}</Text>
               <Text style={[styles.actionDesc, { color: colors.textSecondary }]}>
-                Ambil foto langsung dari kamera
+                {t('camera_desc')}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
@@ -156,9 +158,9 @@ export default function ScannerScreen() {
               <Ionicons name="images" size={28} color="#F59E0B" />
             </View>
             <View style={styles.actionTextBox}>
-              <Text style={[styles.actionTitle, { color: colors.text }]}>Pilih dari Galeri</Text>
+              <Text style={[styles.actionTitle, { color: colors.text }]}>{t('choose_gallery')}</Text>
               <Text style={[styles.actionDesc, { color: colors.textSecondary }]}>
-                Upload gambar yang sudah ada
+                {t('gallery_desc')}
               </Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
@@ -166,18 +168,18 @@ export default function ScannerScreen() {
 
           {/* Tips */}
           <View style={[styles.tipsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.tipsTitle, { color: colors.text }]}>Tips untuk hasil terbaik:</Text>
+            <Text style={[styles.tipsTitle, { color: colors.text }]}>{t('tips_best_result')}</Text>
             <View style={styles.tipRow}>
               <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-              <Text style={[styles.tipText, { color: colors.textSecondary }]}>Pastikan pencahayaan cukup terang</Text>
+              <Text style={[styles.tipText, { color: colors.textSecondary }]}>{t('tip_lighting')}</Text>
             </View>
             <View style={styles.tipRow}>
               <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-              <Text style={[styles.tipText, { color: colors.textSecondary }]}>Posisikan teks sejajar dengan kamera</Text>
+              <Text style={[styles.tipText, { color: colors.textSecondary }]}>{t('tip_align')}</Text>
             </View>
             <View style={styles.tipRow}>
               <Ionicons name="checkmark-circle" size={16} color="#10B981" />
-              <Text style={[styles.tipText, { color: colors.textSecondary }]}>Hindari bayangan pada teks</Text>
+              <Text style={[styles.tipText, { color: colors.textSecondary }]}>{t('tip_shadow')}</Text>
             </View>
           </View>
         </ScrollView>
@@ -189,7 +191,7 @@ export default function ScannerScreen() {
               <Image source={{ uri: imageUri }} style={styles.imagePreview} resizeMode="contain" />
               <TouchableOpacity style={styles.retakeBtn} onPress={handleReset}>
                 <Ionicons name="refresh" size={16} color="#FFF" />
-                <Text style={styles.retakeBtnText}>Ambil Ulang</Text>
+                <Text style={styles.retakeBtnText}>{t('retake')}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -199,12 +201,12 @@ export default function ScannerScreen() {
             <View style={styles.textSectionHeader}>
               <View style={styles.textSectionLeft}>
                 <Ionicons name="document-text" size={18} color={colors.primary} />
-                <Text style={[styles.textSectionTitle, { color: colors.text }]}>Catatan atau Instruksi</Text>
+                <Text style={[styles.textSectionTitle, { color: colors.text }]}>{t('notes_instructions')}</Text>
               </View>
             </View>
             <TextInput
               style={[styles.textInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              placeholder="Berikan instruksi tambahan (misal: 'Jelaskan soal nomor 5') atau biarkan kosong jika ingin menganalisis seluruh gambar..."
+              placeholder={t('scanner_placeholder')}
               placeholderTextColor={colors.textMuted}
               value={extractedText}
               onChangeText={setExtractedText}
@@ -222,12 +224,12 @@ export default function ScannerScreen() {
             {isAnalyzing ? (
               <View style={styles.analyzingRow}>
                 <ActivityIndicator color="#FFF" />
-                <Text style={styles.analyzeBtnText}>  AI Sedang Menganalisis...</Text>
+                <Text style={styles.analyzeBtnText}>  {t('ai_analyzing')}</Text>
               </View>
             ) : (
               <>
                 <Ionicons name="sparkles" size={20} color="#FFF" style={{ marginRight: 8 }} />
-                <Text style={styles.analyzeBtnText}>Analisis dengan AI</Text>
+                <Text style={styles.analyzeBtnText}>{t('analyze_ai')}</Text>
               </>
             )}
           </TouchableOpacity>

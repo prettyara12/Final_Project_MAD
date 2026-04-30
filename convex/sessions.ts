@@ -19,8 +19,8 @@ export const bookSession = mutation({
     const learner = await ctx.db.get(args.learnerId);
     await ctx.db.insert("notifications", {
       userId: args.tutorId,
-      title: "Permintaan Sesi Baru",
-      description: `${learner?.name || "Siswa"} memesan sesi ${args.subject} pada ${args.date} ${args.time}.`,
+      title: "notif_new_request_title",
+      description: `notif_new_request_desc|name:${learner?.name || "Siswa"},subject:${args.subject},date:${args.date},time:${args.time}`,
       type: "booking",
       read: false,
       createdAt: Date.now(),
@@ -30,8 +30,8 @@ export const bookSession = mutation({
     const tutor = await ctx.db.get(args.tutorId);
     await ctx.db.insert("notifications", {
       userId: args.learnerId,
-      title: "Pesanan Sesi Terkirim",
-      description: `Pesanan sesi ${args.subject} kamu pada ${args.date} ${args.time} telah dikirim ke Tutor ${tutor?.name || ""}. Menunggu konfirmasi.`,
+      title: "notif_booking_sent_title",
+      description: `notif_booking_sent_desc|subject:${args.subject},date:${args.date},time:${args.time},name:${tutor?.name || ""}`,
       type: "booking",
       read: false,
       createdAt: Date.now(),
@@ -148,8 +148,8 @@ export const acceptRequest = mutation({
     const tutor = await ctx.db.get(session.tutorId);
     await ctx.db.insert("notifications", {
       userId: session.learnerId,
-      title: "Sesi Dikonfirmasi",
-      description: `Tutor ${tutor?.name || ""} telah menerima pesanan sesi ${session.subject} kamu pada ${session.date} ${session.time}.`,
+      title: "notif_session_confirmed_title",
+      description: `notif_session_confirmed_desc|name:${tutor?.name || ""},subject:${session.subject},date:${session.date},time:${session.time}`,
       type: "booking",
       read: false,
       createdAt: Date.now(),
@@ -171,8 +171,8 @@ export const rejectRequest = mutation({
     const tutor = await ctx.db.get(session.tutorId);
     await ctx.db.insert("notifications", {
       userId: session.learnerId,
-      title: "Sesi Ditolak",
-      description: `Tutor ${tutor?.name || ""} tidak dapat menerima pesanan sesi ${session.subject} kamu pada ${session.date} ${session.time}.`,
+      title: "notif_session_rejected_title",
+      description: `notif_session_rejected_desc|name:${tutor?.name || ""},subject:${session.subject},date:${session.date},time:${session.time}`,
       type: "system",
       read: false,
       createdAt: Date.now(),

@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import { InputField } from '../../components/InputField';
 import { CustomButton } from '../../components/CustomButton';
 import { useProfile } from '../../context/ProfileContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 
@@ -26,7 +27,8 @@ export default function TutorRegisterScreen() {
   const { updateProfile } = useProfile();
   const createUser = useMutation(api.users.createUser);
   const createTutorProfile = useMutation(api.tutors.createTutorProfile);
-  
+  const { t } = useLanguage();
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -38,21 +40,23 @@ export default function TutorRegisterScreen() {
     let valid = true;
     let newErrors = { name: '', email: '', password: '' };
 
-    if (!name.trim()) { newErrors.name = 'Nama lengkap diperlukan'; valid = false; }
-    if (!email.trim()) { newErrors.email = 'Alamat Email harus diisi'; valid = false; }
-    else if (!email.includes('@')) { newErrors.email = 'Format email tidak valid'; valid = false; }
-    if (!password) { newErrors.password = 'Kata sandi harus diisi'; valid = false; }
-    else if (password.length < 6) { newErrors.password = 'Kata sandi minimal 6 karakter'; valid = false; }
+    if (!name.trim()) { newErrors.name = t('error_name_required'); valid = false; }
+    if (!email.trim()) { newErrors.email = t('error_email_required'); valid = false; }
+    else if (!email.includes('@')) { newErrors.email = t('error_email_invalid'); valid = false; }
+    if (!password) { newErrors.password = t('error_password_required'); valid = false; }
+    else if (password.length < 6) { newErrors.password = t('error_password_length'); valid = false; }
 
     setErrors(newErrors);
 
     if (valid) {
       setIsLoading(true);
       try {
+        const normalizedEmail = email.trim().toLowerCase();
         // 1. Create user in Convex as tutor
         const userId = await createUser({
           name: name,
-          email: email,
+          email: normalizedEmail,
+          password: password,
           role: "tutor",
         });
         
@@ -70,11 +74,11 @@ export default function TutorRegisterScreen() {
           email: email,
         });
         
-        Alert.alert("Success", "Registrasi Tutor Berhasil!");
+        Alert.alert(t('berhasil'), t('register_success'));
         router.replace('/tutor/TutorDashboardScreen' as any);
       } catch (error) {
         console.error("Convex Mutation Error:", error);
-        Alert.alert("Error", "Gagal mendaftarkan akun Tutor: " + (error as any).message);
+        Alert.alert(t('error'), t('register_failed') + ": " + (error as any).message);
       } finally {
         setIsLoading(false);
       }
@@ -96,37 +100,37 @@ export default function TutorRegisterScreen() {
       >
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
-            <Text style={styles.title}>Tutor Register 🚀</Text>
+            <Text style={styles.title}>{t('register_title')} 🚀</Text>
             <Text style={styles.subtitle}>
-              Bergabunglah sebagai tutor untuk membantu orang lain belajar.
+              {t('register_subtitle_tutor')}
             </Text>
           </View>
 
           <View style={styles.cardContainer}>
              <View style={styles.formContainer}>
-               <InputField label="Nama Lengkap" placeholder="Cth: Nadiem Makarim" value={name} onChangeText={setName} />
+               <InputField label={t('name_label')} placeholder={t('name_placeholder')} value={name} onChangeText={setName} />
                <Text style={styles.errorText}>{errors.name ? errors.name : ' '}</Text>
 
-               <InputField label="Alamat Email" placeholder="tutor@universitas.ac.id" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+               <InputField label={t('email_label')} placeholder={t('email_placeholder')} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
                <Text style={styles.errorText}>{errors.email ? errors.email : ' '}</Text>
 
-               <InputField label="Kata Sandi" placeholder="Minimal 6 Karakter" value={password} onChangeText={setPassword} secureTextEntry />
+               <InputField label={t('password_label')} placeholder={t('password_placeholder')} value={password} onChangeText={setPassword} secureTextEntry />
                <Text style={styles.errorText}>{errors.password ? errors.password : ' '}</Text>
 
                <View style={styles.mainButtonContainer}>
                  {isLoading ? (
                    <ActivityIndicator size="large" color="#4F46E5" />
                  ) : (
-                   <CustomButton title="Register as Tutor" onPress={handleRegister} style={styles.registerBtnStyle} />
+                   <CustomButton title={t('register_as_tutor_btn')} onPress={handleRegister} style={styles.registerBtnStyle} />
                  )}
                </View>
              </View>
           </View>
 
           <View style={styles.loginContainer}>
-            <Text style={styles.loginText}>Sudah memiliki akun Tutor? </Text>
+            <Text style={styles.loginText}>{t('already_have_account_tutor')} </Text>
             <TouchableOpacity onPress={navigateToLogin}>
-              <Text style={styles.loginLink}>Masuk di sini</Text>
+              <Text style={styles.loginLink}>{t('login_here')}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

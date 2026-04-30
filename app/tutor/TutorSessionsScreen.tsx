@@ -12,12 +12,14 @@ import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useProfile } from '../../context/ProfileContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { Ionicons } from '@expo/vector-icons';
 import { SessionCard } from '../../components/SessionCard';
 
 export default function TutorSessionsScreen() {
   const { profileData } = useProfile();
   const { colors } = useTheme();
+  const { t } = useLanguage();
 
   const user = useQuery(api.users.getUserByEmail, profileData?.email ? { email: profileData.email } : "skip");
   const tutorId = user?._id;
@@ -36,16 +38,16 @@ export default function TutorSessionsScreen() {
     <SessionCard
       title={item.subject}
       time={`${item.date} | ${item.time}`}
-      tutor={item.learner?.name || 'Siswa'}
+      tutor={item.learner?.name || t('student')}
     />
   );
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Sesi Saya</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('my_sessions')}</Text>
         <View style={[styles.badge, { backgroundColor: colors.primaryLight }]}>
-          <Text style={[styles.badgeText, { color: colors.primary }]}>{sessions?.length || 0} total</Text>
+          <Text style={[styles.badgeText, { color: colors.primary }]}>{sessions?.length || 0} {t('total')}</Text>
         </View>
       </View>
 
@@ -60,8 +62,8 @@ export default function TutorSessionsScreen() {
             <View style={[styles.emptyIconCircle, { backgroundColor: colors.surface }]}>
               <Ionicons name="calendar-outline" size={40} color={colors.textMuted} />
             </View>
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>Belum ada sesi</Text>
-            <Text style={[styles.emptySubtext, { color: colors.textMuted }]}>Sesi yang sudah dikonfirmasi akan muncul di sini.</Text>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>{t('no_sessions')}</Text>
+            <Text style={[styles.emptySubtext, { color: colors.textMuted }]}>{t('confirmed_sessions_desc')}</Text>
           </View>
         }
       />

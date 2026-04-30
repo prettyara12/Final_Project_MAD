@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useLanguage } from '../context/LanguageContext';
 
 interface SessionCardProps {
   title: string;
@@ -15,18 +16,20 @@ export const SessionCard: React.FC<SessionCardProps> = ({
   tutor,
   onPress
 }) => {
+  const { t } = useLanguage();
+  
   return (
     <TouchableOpacity style={styles.sessionCard} onPress={onPress}>
        <View style={styles.sessionIconBox}>
           <Ionicons name="videocam" size={24} color="#FFF" />
        </View>
        <View style={styles.sessionInfo}>
-          <Text style={styles.sessionTitle}>{title}</Text>
+          <Text style={styles.sessionTitle}>{t(`subject_${title.toLowerCase().replace(/\s+/g, '_')}`)}</Text>
           <Text style={styles.sessionTime}>{time}</Text>
-          <Text style={styles.sessionTutor}>Tutor: {tutor}</Text>
+          <Text style={styles.sessionTutor}>{t('role_tutor')}: {tutor}</Text>
        </View>
        <TouchableOpacity style={styles.joinBtn} onPress={() => require('expo-router').router.push('/chat/ChatListScreen')}>
-          <Text style={styles.joinBtnText}>Chat</Text>
+          <Text style={styles.joinBtnText}>{t('tab_chat')}</Text>
        </TouchableOpacity>
     </TouchableOpacity>
   );

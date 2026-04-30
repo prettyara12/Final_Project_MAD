@@ -12,13 +12,15 @@ import {
   Dimensions,
   Alert,
   ActivityIndicator,
-  Image
+  Image,
+  Modal
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { InputField } from '../../components/InputField';
 import { CustomButton } from '../../components/CustomButton';
 import { useProfile } from '../../context/ProfileContext';
+import { useLanguage, LanguageType } from '../../context/LanguageContext';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 
@@ -27,31 +29,33 @@ const { width, height } = Dimensions.get('window');
 export default function LoginScreen() {
   const router = useRouter();
   const { updateProfile, clearProfile } = useProfile();
+  const { language, setLanguage, t } = useLanguage();
 
   const [activeRole, setActiveRole] = useState<'learner' | 'tutor'>('learner');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({ email: '', password: '' });
+  const [languageModalVisible, setLanguageModalVisible] = useState(false);
 
   // Kita gunakan query untuk mencari user berdasarkan email (logic simulasi login)
-  // Di real app, gunakan Convex Auth untuk keamanan yang sebenarnya
-  const user = useQuery(api.users.getUserByEmail, { email: email });
+  const normalizedEmail = email.trim().toLowerCase();
+  const user = useQuery(api.users.getUserByEmail, normalizedEmail.includes('@') ? { email: normalizedEmail } : "skip");
 
   const handleLogin = async () => {
     let valid = true;
     let newErrors = { email: '', password: '' };
 
     if (!email.trim()) {
-      newErrors.email = 'Alamat Email harus diisi';
+      newErrors.email = t('error_email_required');
       valid = false;
     } else if (!email.includes('@')) {
-      newErrors.email = 'Format email tidak valid';
+      newErrors.email = t('error_email_invalid');
       valid = false;
     }
 
     if (!password) {
-      newErrors.password = 'Kata sandi harus diisi';
+      newErrors.password = t('error_password_required');
       valid = false;
     }
 
@@ -64,15 +68,17 @@ export default function LoginScreen() {
       setTimeout(() => {
         if (user) {
           // Periksa role user
-          const userRole = user.role || 'learner'; // fallback jika role tidak ada
+          const userRole = user.role || 'learner';
           if (userRole !== activeRole) {
-            Alert.alert("Error", `Akun ini terdaftar sebagai ${userRole}, bukan ${activeRole}.`);
+            Alert.alert("Error", t('account_role_mismatch')
+              .replace('{role}', t(`role_${userRole}`))
+              .replace('{target}', t(`role_${activeRole}`))
+            );
             setIsLoading(false);
             return;
           }
 
           // Jika user ditemukan di database, update profile context
-          // Reset dulu ke default baru timpa dengan data user baru agar data lama tidak tertinggal
           clearProfile();
           updateProfile({
             name: user.name,
@@ -91,7 +97,7 @@ export default function LoginScreen() {
             router.replace('/HomeScreen' as any);
           }
         } else {
-          Alert.alert("Error", "User tidak ditemukan. Silakan daftar terlebih dahulu.");
+          Alert.alert(t('error'), t('user_not_found'));
         }
         setIsLoading(false);
       }, 1000);
@@ -113,12 +119,27 @@ export default function LoginScreen() {
 
       <KeyboardAvoidingView style={styles.keyboardView} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          <View style={styles.topBar}>
+            <TouchableOpacity 
+              style={styles.languageSelectBtn}
+              onPress={() => setLanguageModalVisible(true)}
+            >
+              <Text style={styles.languageEmoji}>
+                {language === 'id' ? '🇮🇩' : language === 'en' ? '🇺🇸' : '🇨🇳'}
+              </Text>
+              <Text style={styles.languageBtnText}>
+                {language === 'id' ? 'ID' : language === 'en' ? 'EN' : 'ZH'}
+              </Text>
+              <Ionicons name="chevron-down" size={14} color="#4F46E5" />
+            </TouchableOpacity>
+          </View>
+
           <View style={styles.header}>
             <Text style={styles.title}>
-              {activeRole === 'tutor' ? 'Selamat\nDatang Tutor 👋' : 'Selamat\nDatang 👋'}
+              {activeRole === 'tutor' ? t('login_title_tutor') : t('login_title_learner')}
             </Text>
-            <Text style={styles.subtitle} numberOfLines={1} adjustsFontSizeToFit>
-              {activeRole === 'tutor' ? 'Masuk untuk mulai mengajar dan berbagi ilmu.' : 'Masuk untuk melanjutkan perjalanan belajarmu dengan AI.'}
+            <Text style={styles.subtitle} numberOfLines={2} adjustsFontSizeToFit>
+              {activeRole === 'tutor' ? t('login_subtitle_tutor') : t('login_subtitle_learner')}
             </Text>
           </View>
 
@@ -129,37 +150,40 @@ export default function LoginScreen() {
                   style={[styles.roleButton, activeRole === 'learner' && styles.roleButtonActive]}
                   onPress={() => setActiveRole('learner')}
                 >
-                  <Text style={[styles.roleButtonText, activeRole === 'learner' && styles.roleButtonTextActive]}>Pelajar</Text>
+                  <Text style={[styles.roleButtonText, activeRole === 'learner' && styles.roleButtonTextActive]}>{t('role_learner')}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.roleButton, activeRole === 'tutor' && styles.roleButtonActive]}
                   onPress={() => setActiveRole('tutor')}
                 >
-                  <Text style={[styles.roleButtonText, activeRole === 'tutor' && styles.roleButtonTextActive]}>Tutor</Text>
+                  <Text style={[styles.roleButtonText, activeRole === 'tutor' && styles.roleButtonTextActive]}>{t('role_tutor')}</Text>
                 </TouchableOpacity>
               </View>
 
-              <InputField label="Alamat Email" placeholder="Masukkan alamat email" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+              <InputField label={t('email_label')} placeholder={t('email_placeholder')} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
               <Text style={styles.errorText}>{errors.email ? errors.email : ' '}</Text>
 
-              <InputField label="Kata Sandi" placeholder="Masukkan kata sandi" value={password} onChangeText={setPassword} secureTextEntry />
+              <InputField label={t('password_label')} placeholder={t('password_placeholder')} value={password} onChangeText={setPassword} secureTextEntry />
               <Text style={styles.errorText}>{errors.password ? errors.password : ' '}</Text>
 
-              <TouchableOpacity style={styles.forgotPassword}>
-                <Text style={styles.forgotPasswordText}>Lupa Kata Sandi?</Text>
+              <TouchableOpacity 
+                style={styles.forgotPassword}
+                onPress={() => router.push('/(auth)/ForgotPasswordScreen' as any)}
+              >
+                <Text style={styles.forgotPasswordText}>{t('forgot_password')}</Text>
               </TouchableOpacity>
 
               <View style={styles.mainButtonContainer}>
                 {isLoading ? (
                   <ActivityIndicator size="large" color="#4F46E5" />
                 ) : (
-                  <CustomButton title={activeRole === 'tutor' ? "Masuk Sebagai Tutor" : "Masuk Sekarang"} onPress={handleLogin} style={styles.loginBtnStyle} />
+                  <CustomButton title={activeRole === 'tutor' ? t('login_btn_tutor') : t('login_btn')} onPress={handleLogin} style={styles.loginBtnStyle} />
                 )}
               </View>
 
               <View style={styles.dividerContainer}>
                 <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>ATAU LOG IN DENGAN</Text>
+                <Text style={styles.dividerText}>{t('or_login_with')}</Text>
                 <View style={styles.dividerLine} />
               </View>
 
@@ -174,16 +198,52 @@ export default function LoginScreen() {
 
           <View style={styles.registerContainer}>
             <Text style={styles.registerText}>
-              {activeRole === 'tutor' ? 'Belum memiliki akun Tutor? ' : 'Belum memiliki akun? '}
+              {activeRole === 'tutor' ? t('no_account_tutor') : t('no_account')}
             </Text>
             <TouchableOpacity onPress={navigateToRegister}>
               <Text style={styles.registerLink}>
-                {activeRole === 'tutor' ? 'Daftar sebagai tutor' : 'Daftar di sini'}
+                {activeRole === 'tutor' ? t('register_as_tutor') : t('register_here')}
               </Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Language Selection Modal */}
+      <Modal visible={languageModalVisible} animationType="fade" transparent>
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setLanguageModalVisible(false)}
+        >
+          <View style={styles.languageModal}>
+            <Text style={styles.modalTitleText}>{t('language')}</Text>
+            
+            {[
+              { id: 'id', name: 'Bahasa Indonesia', flag: '🇮🇩' },
+              { id: 'en', name: 'English', flag: '🇺🇸' },
+            ].map((lang) => (
+              <TouchableOpacity
+                key={lang.id}
+                style={[
+                  styles.languageOption,
+                  language === lang.id && styles.languageOptionActive
+                ]}
+                onPress={() => {
+                  setLanguage(lang.id as LanguageType);
+                  setLanguageModalVisible(false);
+                }}
+              >
+                <Text style={styles.languageOptionFlag}>{lang.flag}</Text>
+                <Text style={styles.languageOptionName}>{lang.name}</Text>
+                {language === lang.id && (
+                  <Ionicons name="checkmark-circle" size={22} color="#4F46E5" />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -216,5 +276,16 @@ const styles = StyleSheet.create({
   socialBtn: { width: 60, height: 60, borderRadius: 30, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB', justifyContent: 'center', alignItems: 'center' },
   registerContainer: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginTop: 'auto', minHeight: 24 },
   registerText: { color: '#6B7280', fontSize: 14, fontWeight: '500' },
-  registerLink: { color: '#111827', fontSize: 14, fontWeight: '800' }
+  registerLink: { color: '#111827', fontSize: 14, fontWeight: '800' },
+  topBar: { flexDirection: 'row', justifyContent: 'flex-end', marginBottom: 20 },
+  languageSelectBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2, gap: 6 },
+  languageEmoji: { fontSize: 16 },
+  languageBtnText: { fontSize: 13, fontWeight: '700', color: '#4F46E5' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  languageModal: { backgroundColor: '#FFFFFF', width: width * 0.8, borderRadius: 28, padding: 24, shadowColor: '#000', shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 5 },
+  modalTitleText: { fontSize: 20, fontWeight: '900', color: '#111827', marginBottom: 20, textAlign: 'center' },
+  languageOption: { flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 16, marginBottom: 8, gap: 12, borderWidth: 1, borderColor: 'transparent' },
+  languageOptionActive: { backgroundColor: '#F5F3FF', borderColor: '#C4B5FD' },
+  languageOptionFlag: { fontSize: 24 },
+  languageOptionName: { flex: 1, fontSize: 16, fontWeight: '600', color: '#1F2937' },
 });

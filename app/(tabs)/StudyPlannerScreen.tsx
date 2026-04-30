@@ -14,11 +14,13 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { generateStudyPlan } from '../../services/gemini';
 
 export default function StudyPlannerScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { t, language } = useLanguage();
 
   const [subject, setSubject] = useState('');
   const [goal, setGoal] = useState('');
@@ -38,7 +40,7 @@ export default function StudyPlannerScreen() {
 
   const handleGenerate = async () => {
     if (!subject.trim() || !goal.trim()) {
-      Alert.alert('Input Tidak Lengkap', 'Harap isi mata pelajaran dan tujuan belajar Anda.');
+      Alert.alert(t('error_input_incomplete'), t('error_fill_subject_goal'));
       return;
     }
 
@@ -46,18 +48,18 @@ export default function StudyPlannerScreen() {
     const d = parseInt(days) || 5;
 
     if (h < 1 || h > 12) {
-      Alert.alert('Input Tidak Valid', 'Jam belajar per hari harus antara 1-12 jam.');
+      Alert.alert(t('error_invalid_input'), t('error_hours_range'));
       return;
     }
 
     if (d < 1 || d > 30) {
-      Alert.alert('Input Tidak Valid', 'Durasi harus antara 1-30 hari.');
+      Alert.alert(t('error_invalid_input'), t('error_days_range'));
       return;
     }
 
     setIsLoading(true);
     try {
-      const plan = await generateStudyPlan(subject, goal, h, d);
+      const plan = await generateStudyPlan(subject, goal, h, d, language as any);
       
       if (plan) {
         router.push({
@@ -65,11 +67,11 @@ export default function StudyPlannerScreen() {
           params: { planData: JSON.stringify(plan), subject }
         });
       } else {
-        Alert.alert('Gagal', 'AI tidak dapat menghasilkan rencana saat ini. Coba lagi.');
+        Alert.alert(t('failed'), t('failed_analyze_alert'));
       }
     } catch (error) {
       console.error(error);
-      Alert.alert('Error', 'Terjadi kesalahan sistem.');
+      Alert.alert(t('error'), t('error_system'));
     } finally {
       setIsLoading(false);
     }
@@ -82,7 +84,7 @@ export default function StudyPlannerScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
            <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>AI Study Planner</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('study_planner_title')}</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -91,19 +93,19 @@ export default function StudyPlannerScreen() {
           <View style={[styles.iconBox, { backgroundColor: colors.primaryLight }]}>
              <Ionicons name="calendar" size={32} color={colors.primary} />
           </View>
-          <Text style={[styles.mainTitle, { color: colors.text }]}>Buat Rencana Belajar</Text>
+          <Text style={[styles.mainTitle, { color: colors.text }]}>{t('create_schedule')}</Text>
           <Text style={[styles.subTitle, { color: colors.textSecondary }]}>
-            Beritahu AI apa yang ingin Anda pelajari, dan dapatkan jadwal terstruktur dari hari ke hari.
+            {t('planner_desc')}
           </Text>
         </View>
 
         <View style={[styles.formCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>Mata Pelajaran / Topik</Text>
+            <Text style={[styles.label, { color: colors.text }]}>{t('subject_label')}</Text>
             <TextInput
               style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
-              placeholder="Contoh: Matematika Diskrit, React Native..."
+              placeholder={t('subject_placeholder')}
               placeholderTextColor={colors.textMuted}
               value={subject}
               onChangeText={setSubject}
@@ -111,10 +113,10 @@ export default function StudyPlannerScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>Tujuan Belajar</Text>
+            <Text style={[styles.label, { color: colors.text }]}>{t('goal_label')}</Text>
             <TextInput
               style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text, height: 80, textAlignVertical: 'top' }]}
-              placeholder="Contoh: Persiapan ujian akhir, Menguasai dasar-dasar..."
+              placeholder={t('goal_placeholder')}
               placeholderTextColor={colors.textMuted}
               value={goal}
               onChangeText={setGoal}
@@ -124,7 +126,7 @@ export default function StudyPlannerScreen() {
 
           <View style={styles.row}>
             <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-              <Text style={[styles.label, { color: colors.text }]}>Jam per Hari</Text>
+              <Text style={[styles.label, { color: colors.text }]}>{t('hours_day_label')}</Text>
               <TextInput
                 style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
                 placeholder="2"
@@ -135,7 +137,7 @@ export default function StudyPlannerScreen() {
               />
             </View>
             <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-              <Text style={[styles.label, { color: colors.text }]}>Durasi (Hari)</Text>
+              <Text style={[styles.label, { color: colors.text }]}>{t('duration_label')}</Text>
               <TextInput
                 style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
                 placeholder="5"
@@ -159,7 +161,7 @@ export default function StudyPlannerScreen() {
           ) : (
             <>
               <Ionicons name="sparkles" size={20} color="#FFF" style={{ marginRight: 8 }} />
-              <Text style={styles.generateBtnText}>Generate Study Plan</Text>
+              <Text style={styles.generateBtnText}>{t('generate_plan')}</Text>
             </>
           )}
         </TouchableOpacity>

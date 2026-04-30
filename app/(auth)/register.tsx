@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import { InputField } from '../../components/InputField';
 import { CustomButton } from '../../components/CustomButton';
 import { useProfile } from '../../context/ProfileContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 
@@ -24,6 +25,7 @@ const { width, height } = Dimensions.get('window');
 export default function RegisterScreen() {
   const router = useRouter();
   const { updateProfile } = useProfile();
+  const { t, language } = useLanguage();
   const createUser = useMutation(api.users.createUser);
   
   const [name, setName] = useState('');
@@ -38,28 +40,28 @@ export default function RegisterScreen() {
     let newErrors = { name: '', email: '', password: '', confirmPassword: '' };
 
     if (!name.trim()) {
-       newErrors.name = 'Nama lengkap diperlukan';
+       newErrors.name = t('error_name_required');
        valid = false;
     }
 
     if (!email.trim()) {
-      newErrors.email = 'Alamat Email harus diisi';
+      newErrors.email = t('error_email_required');
       valid = false;
     } else if (!email.includes('@')) {
-      newErrors.email = 'Format email tidak valid';
+      newErrors.email = t('error_email_invalid');
       valid = false;
     }
 
     if (!password) {
-      newErrors.password = 'Kata sandi harus diisi';
+      newErrors.password = t('error_password_required');
       valid = false;
     } else if (password.length < 6) {
-      newErrors.password = 'Kata sandi minimal 6 karakter';
+      newErrors.password = t('error_password_length');
       valid = false;
     }
 
     if (password !== confirmPassword) {
-      newErrors.confirmPassword = 'Kata sandi tidak cocok';
+      newErrors.confirmPassword = t('error_password_mismatch');
       valid = false;
     }
 
@@ -69,10 +71,12 @@ export default function RegisterScreen() {
       setIsLoading(true);
       console.log("Registering user:", { name, email });
       try {
+        const normalizedEmail = email.trim().toLowerCase();
         // Simpan ke Convex Database
         const result = await createUser({
           name: name,
-          email: email,
+          email: normalizedEmail,
+          password: password,
           role: "learner", 
         });
         
@@ -87,7 +91,7 @@ export default function RegisterScreen() {
         router.replace('/HomeScreen' as any);
       } catch (error) {
         console.error("Convex Mutation Error:", error);
-        Alert.alert("Error", "Gagal mendaftarkan akun ke database: " + (error as any).message);
+        Alert.alert("Error", t('register_failed') + ": " + (error as any).message);
       } finally {
         setIsLoading(false);
       }
@@ -109,44 +113,48 @@ export default function RegisterScreen() {
       >
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.header}>
-            <Text style={styles.title}>Buat Akun{'\n'}Baru 🚀</Text>
+            <Text style={styles.title}>{t('register_title')} 🚀</Text>
             <Text style={styles.subtitle}>
-              Bergabunglah dengan ekosistem belajar paling mutakhir saat ini.
+              {t('register_subtitle')}
             </Text>
           </View>
 
           <View style={styles.cardContainer}>
-             <View style={styles.formContainer}>
-               <InputField label="Nama Lengkap" placeholder="Cth: Nadiem Makarim" value={name} onChangeText={setName} />
-               <Text style={styles.errorText}>{errors.name ? errors.name : ' '}</Text>
+              <View style={styles.formContainer}>
+                <InputField label={t('name_label')} placeholder={t('name_placeholder')} value={name} onChangeText={setName} />
+                <Text style={styles.errorText}>{errors.name ? errors.name : ' '}</Text>
 
-               <InputField label="Alamat Email" placeholder="kamu@universitas.ac.id" value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
-               <Text style={styles.errorText}>{errors.email ? errors.email : ' '}</Text>
+                <InputField label={t('email_label')} placeholder={t('email_placeholder')} value={email} onChangeText={setEmail} keyboardType="email-address" autoCapitalize="none" />
+                <Text style={styles.errorText}>{errors.email ? errors.email : ' '}</Text>
 
-               <InputField label="Kata Sandi" placeholder="Minimal 6 Karakter" value={password} onChangeText={setPassword} secureTextEntry />
-               <Text style={styles.errorText}>{errors.password ? errors.password : ' '}</Text>
+                <InputField label={t('password_label')} placeholder={t('password_placeholder')} value={password} onChangeText={setPassword} secureTextEntry />
+                <Text style={styles.errorText}>{errors.password ? errors.password : ' '}</Text>
 
-               <InputField label="Konfirmasi Kata Sandi" placeholder="Ulangi Kata Sandi" value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
-               <Text style={styles.errorText}>{errors.confirmPassword ? errors.confirmPassword : ' '}</Text>
+                <InputField label={t('confirm_password_label')} placeholder={t('confirm_password_placeholder')} value={confirmPassword} onChangeText={setConfirmPassword} secureTextEntry />
+                <Text style={styles.errorText}>{errors.confirmPassword ? errors.confirmPassword : ' '}</Text>
 
                <View style={styles.mainButtonContainer}>
-                 {isLoading ? (
-                   <ActivityIndicator size="large" color="#4F46E5" />
-                 ) : (
-                   <CustomButton title="Daftar Sekarang" onPress={handleRegister} style={styles.registerBtnStyle} />
-                 )}
+                  {isLoading ? (
+                    <ActivityIndicator size="large" color="#4F46E5" />
+                  ) : (
+                    <CustomButton title={t('register_now')} onPress={handleRegister} style={styles.registerBtnStyle} />
+                  )}
                </View>
 
-               <Text style={styles.termsText}>
-                 Dengan mendaftar, kamu menyetujui <Text style={styles.termsHighlight}>Ketentuan Layanan</Text> dan <Text style={styles.termsHighlight}>Kebijakan Privasi</Text> kami.
-               </Text>
+                <Text style={styles.termsText}>
+                  {t('terms_text').split('{terms}')[0]}
+                  <Text style={styles.termsHighlight}>{t('terms_link')}</Text>
+                  {t('terms_text').split('{terms}')[1].split('{privacy}')[0]}
+                  <Text style={styles.termsHighlight}>{t('privacy_link')}</Text>
+                  {t('terms_text').split('{privacy}')[1]}
+                </Text>
              </View>
           </View>
 
           <View style={styles.loginContainer}>
-            <Text style={styles.loginText}>Sudah memiliki akun? </Text>
+            <Text style={styles.loginText}>{t('already_have_account')} </Text>
             <TouchableOpacity onPress={navigateToLogin}>
-              <Text style={styles.loginLink}>Masuk di sini</Text>
+              <Text style={styles.loginLink}>{t('login_here')}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

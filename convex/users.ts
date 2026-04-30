@@ -5,6 +5,7 @@ export const createUser = mutation({
   args: {
     name: v.string(),
     email: v.string(),
+    password: v.optional(v.string()),
     role: v.union(v.literal("tutor"), v.literal("learner")),
     university: v.optional(v.string()),
     major: v.optional(v.string()),
@@ -13,6 +14,7 @@ export const createUser = mutation({
     const userId = await ctx.db.insert("users", {
       name: args.name,
       email: args.email,
+      password: args.password,
       role: args.role,
       university: args.university,
       major: args.major,
@@ -36,6 +38,7 @@ export const updateUser = mutation({
       })
     ),
     profileImage: v.optional(v.string()),
+    language: v.optional(v.union(v.literal("id"), v.literal("en"), v.literal("zh"))),
   },
   handler: async (ctx, args) => {
     const { id, ...fields } = args;
@@ -89,5 +92,33 @@ export const getLearningPulse = query({
       total: Math.max(allSessions.length, weeklyGoal),
       nextAchievement,
     };
+  },
+});
+
+export const resetPasswordByEmail = mutation({
+  args: { email: v.string(), newPassword: v.string() },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .unique();
+    
+    if (!user) {
+      throw new Error("User not found");
+    }
+
+    await ctx.db.patch(user._id, { password: args.newPassword });
+    return true;
+  },
+});
+
+export const checkUserExists = mutation({
+  args: { email: v.string() },
+  handler: async (ctx, args) => {
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", args.email))
+      .unique();
+    return user !== null;
   },
 });

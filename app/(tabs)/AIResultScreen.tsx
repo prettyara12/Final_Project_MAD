@@ -14,6 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { getTutorRecommendation } from '../../services/gemini';
@@ -23,6 +24,7 @@ const { width } = Dimensions.get('window');
 export default function AIResultScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { t, language } = useLanguage();
   const { subject, preferredTime, learningStyle, difficulty, notes } = useLocalSearchParams();
 
   const [aiRankings, setAiRankings] = React.useState<any[] | null>(null);
@@ -50,7 +52,7 @@ export default function AIResultScreen() {
             learningStyle: (learningStyle as string) || "Campuran",
             difficulty: (difficulty as string) || "Menengah",
             notes: (notes as string) || ""
-          }, allTutors);
+          }, allTutors, language as any);
 
           if (results && Array.isArray(results)) {
             // Map AI rankings back to full tutor objects
@@ -105,7 +107,7 @@ export default function AIResultScreen() {
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background, justifyContent: 'center' }]}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Gemini AI sedang menganalisis profil tutor...</Text>
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>{t('ai_analyzing_profiles')}</Text>
       </SafeAreaView>
     );
   }
@@ -116,7 +118,7 @@ export default function AIResultScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Hasil Analisis Gemini AI</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('ai_analysis_title')}</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -128,9 +130,9 @@ export default function AIResultScreen() {
               <Text style={[styles.aiBadgeText, { color: colors.primary }]}>AI POWERED</Text>
             </View>
           </View>
-          <Text style={[styles.resultsTitle, { color: colors.text }]}>Rekomendasi Cerdas</Text>
+          <Text style={[styles.resultsTitle, { color: colors.text }]}>{t('smart_recommendation')}</Text>
           <Text style={[styles.resultsSubtitle, { color: colors.textSecondary }]}>
-            Gemini telah memilihkan tutor yang paling cocok dengan gaya belajar {learningStyle} Anda.
+            {t('ai_match_desc').replace('{style}', t(`opt_${(learningStyle as string || '').toLowerCase()}`) || (learningStyle as string))}
           </Text>
         </View>
 
@@ -148,7 +150,7 @@ export default function AIResultScreen() {
               {index === 0 && (
                 <View style={[styles.bestMatchBadge, { backgroundColor: colors.primary }]}>
                   <Ionicons name="sparkles" size={10} color="#FFF" style={{ marginRight: 4 }} />
-                  <Text style={styles.bestMatchText}>AI BEST CHOICE</Text>
+                  <Text style={styles.bestMatchText}>{t('ai_best_choice')}</Text>
                 </View>
               )}
 
@@ -166,7 +168,7 @@ export default function AIResultScreen() {
                     <Text style={[styles.tutorName, { color: colors.text }]}>{tutor.user?.name || tutor.name}</Text>
                     <View style={[styles.matchPercentage, { backgroundColor: colors.successLight }]}>
                       <Text style={[styles.matchPercentageText, { color: colors.success }]}>
-                        Top Match
+                        {t('top_match')}
                       </Text>
                     </View>
                   </View>
@@ -179,7 +181,7 @@ export default function AIResultScreen() {
                   <View style={[styles.aiInsightBox, { backgroundColor: colors.surfaceHover }]}>
                     <Ionicons name="bulb-outline" size={14} color={colors.primary} />
                     <Text style={[styles.aiInsightText, { color: colors.textTertiary }]}>
-                      {tutor.aiExplanation || "Tutor ini memiliki rekam jejak yang sangat baik dalam mengajar subjek ini."}
+                      {tutor.aiExplanation || t('ai_insight_default')}
                     </Text>
                   </View>
 
@@ -198,7 +200,7 @@ export default function AIResultScreen() {
                   style={[styles.viewProfileBtn, { backgroundColor: colors.primary }]}
                   onPress={() => router.push({ pathname: '/TutorProfileScreen', params: { id: tutor._id } } as any)}
                 >
-                  <Text style={styles.viewProfileText}>Mulai Belajar</Text>
+                  <Text style={styles.viewProfileText}>{t('start_learning')}</Text>
                   <Ionicons name="chevron-forward" size={14} color="#FFF" />
                 </TouchableOpacity>
               </View>
@@ -207,12 +209,12 @@ export default function AIResultScreen() {
         ) : (
           <View style={styles.emptyContainer}>
             <Ionicons name="search-outline" size={64} color={colors.textMuted} />
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>AI tidak menemukan tutor yang sesuai.</Text>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>{t('no_tutor_found')}</Text>
             <TouchableOpacity 
               style={[styles.retryButton, { borderColor: colors.primary }]}
               onPress={() => router.back()}
             >
-              <Text style={[styles.retryText, { color: colors.primary }]}>Coba Lagi</Text>
+              <Text style={[styles.retryText, { color: colors.primary }]}>{t('try_again')}</Text>
             </TouchableOpacity>
           </View>
         )}

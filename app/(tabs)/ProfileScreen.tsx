@@ -21,6 +21,7 @@ import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../../context/ThemeContext';
 import { useProfile } from '../../context/ProfileContext';
+import { useLanguage, LanguageType } from '../../context/LanguageContext';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 const { width, height } = Dimensions.get('window');
@@ -29,6 +30,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const { isDark, colors, toggleTheme } = useTheme();
   const { profileData, updateProfile: updateLocalProfile, clearProfile } = useProfile();
+  const { language, setLanguage, t } = useLanguage();
   
   // Convex Integration
   const userQuery = useQuery(api.users.getUserByEmail, profileData?.email ? { email: profileData.email } : "skip");
@@ -41,6 +43,14 @@ export default function ProfileScreen() {
   // Modal states
   const [personalInfoVisible, setPersonalInfoVisible] = useState(false);
   const [securityVisible, setSecurityVisible] = useState(false);
+  const [languageModalVisible, setLanguageModalVisible] = useState(false);
+
+  // Sync Convex language to context on mount
+  useEffect(() => {
+    if (currentUser?.language) {
+      setLanguage(currentUser.language as LanguageType);
+    }
+  }, [currentUser?.language]);
 
   // Local state for modal editing
   const [localDraft, setLocalDraft] = useState({
@@ -82,12 +92,12 @@ export default function ProfileScreen() {
       if (currentUser) {
         try {
           await updateBackendProfile({ id: currentUser._id, profileImage: base64Image });
-          Alert.alert("✅ Berhasil", "Foto profil berhasil diubah!");
+          Alert.alert(`✅ ${t('berhasil')}`, t('profile_photo_updated'));
         } catch (e) {
-          Alert.alert("Error", "Gagal menyimpan foto ke server.");
+          Alert.alert(t('error'), t('save_photo_error'));
         }
       } else {
-        Alert.alert("✅ Berhasil", "Foto profil berhasil diubah!");
+        Alert.alert(`✅ ${t('berhasil')}`, t('profile_photo_updated'));
       }
     }
   };
@@ -98,20 +108,20 @@ export default function ProfileScreen() {
   const [biometricEnabled, setBiometricEnabled] = useState(true);
 
   const handleLogout = useCallback(() => {
-    Alert.alert("Keluar", "Apakah Anda yakin ingin keluar?", [
-      { text: "Batal", style: 'cancel' },
-      { text: "Keluar", style: 'destructive', onPress: () => {
+    Alert.alert(t('logout_confirm_title'), t('logout_confirm_desc'), [
+      { text: t('cancel'), style: 'cancel' },
+      { text: t('logout'), style: 'destructive', onPress: () => {
         clearProfile();
         router.replace('/login' as any);
       } }
     ]);
-  }, [router, clearProfile]);
+  }, [router, clearProfile, t]);
 
   const handleSavePersonalInfo = async () => {
     if (!currentUser) {
       updateLocalProfile(localDraft);
       setPersonalInfoVisible(false);
-      Alert.alert('✅ Tersimpan', 'Profil lokal diperbarui (User belum terdaftar di database).');
+      Alert.alert(`✅ ${t('tersimpan')}`, t('local_profile_updated'));
       return;
     }
     try {
@@ -123,15 +133,14 @@ export default function ProfileScreen() {
       });
       updateLocalProfile(localDraft);
       setPersonalInfoVisible(false);
-      Alert.alert('✅ Tersimpan', 'Profil berhasil diperbarui.');
+      Alert.alert(`✅ ${t('tersimpan')}`, t('profile_updated_success'));
     } catch (error) {
-      Alert.alert('Error', 'Gagal memperbarui profil.');
+      Alert.alert(t('error'), t('failed_update_profile'));
     }
   };
 
-  // Tampilkan loading HANYA jika query sedang loading (undefined)
-  // Jika query selesai dan hasilnya null (user tidak ada), kita lanjut menampilkan desain awal dengan data dummy/context
-  if (currentUser === undefined) {
+  // Tampilkan loading HANYA jika query sedang loading (undefined) dan kita tidak sedang skip
+  if (currentUser === undefined && profileData?.email) {
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background, justifyContent: 'center' }]}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -162,7 +171,7 @@ export default function ProfileScreen() {
           <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: colors.card }]}>
              <Ionicons name="arrow-back" size={22} color={colors.text} />
           </TouchableOpacity>
-          <Text style={[styles.headerLogoText, { color: colors.text, marginLeft: 12 }]}>Profil Saya</Text>
+          <Text style={[styles.headerLogoText, { color: colors.text, marginLeft: 12 }]}>{t('profile')}</Text>
         </View>
         <TouchableOpacity 
           style={[styles.notificationBtn, { backgroundColor: colors.card }]}
@@ -198,7 +207,7 @@ export default function ProfileScreen() {
 
            <Text style={[styles.profileName, { color: colors.text }]}>{displayUser.name}</Text>
            <View style={[styles.rolePill, { backgroundColor: colors.primary + '15' }]}>
-              <Text style={[styles.rolePillText, { color: colors.primary }]}>{displayUser.role.toUpperCase()}</Text>
+              <Text style={[styles.rolePillText, { color: colors.primary }]}>{t(`role_${displayUser.role.toLowerCase()}`).toUpperCase()}</Text>
            </View>
            
            <View style={styles.infoRow}>
@@ -211,16 +220,16 @@ export default function ProfileScreen() {
            </View>
         </View>
 
-        {/* Quick Actions / Theme */}
+        {/* Preferences Section */}
         <View style={styles.sectionWrapper}>
-           <Text style={[styles.sectionHeaderTitle, { color: colors.textSecondary }]}>Preferensi</Text>
+           <Text style={[styles.sectionHeaderTitle, { color: colors.textSecondary }]}>{t('preferences')}</Text>
            <View style={[styles.menuCardGroup, { backgroundColor: colors.card }]}>
               <View style={[styles.toggleRow, { borderBottomWidth: 0 }]}>
                  <View style={styles.toggleRowLeft}>
                     <View style={[styles.menuIconBg, { backgroundColor: isDark ? '#374151' : '#F3F4F6' }]}>
                        <Ionicons name={isDark ? 'moon' : 'sunny'} size={20} color={isDark ? '#FBBF24' : '#F59E0B'} />
                     </View>
-                    <Text style={[styles.menuItemTitle, { color: colors.text }]}>Mode Gelap</Text>
+                    <Text style={[styles.menuItemTitle, { color: colors.text }]}>{t('dark_mode')}</Text>
                  </View>
                  <Switch 
                    value={isDark} 
@@ -229,10 +238,28 @@ export default function ProfileScreen() {
                    thumbColor={isDark ? colors.primary : '#FFF'}
                  />
               </View>
+
+               <TouchableOpacity 
+                 style={[styles.toggleRow, { borderBottomWidth: 0, marginTop: 10 }]}
+                 onPress={() => setLanguageModalVisible(true)}
+               >
+                  <View style={styles.toggleRowLeft}>
+                     <View style={[styles.menuIconBg, { backgroundColor: isDark ? '#374151' : '#F3F4F6' }]}>
+                        <Ionicons name="language" size={20} color={colors.primary} />
+                     </View>
+                     <View style={styles.menuTextCol}>
+                        <Text style={[styles.menuItemTitle, { color: colors.text }]}>{t('language')}</Text>
+                        <Text style={[styles.menuItemSub, { color: colors.textMuted }]}>
+                          {language === 'id' ? 'Bahasa Indonesia' : 'English'}
+                        </Text>
+                     </View>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+               </TouchableOpacity>
            </View>
         </View>
 
-        {/* Account Settings */}
+        {/* Account Settings Section */}
         <View style={styles.sectionWrapper}>
            <Text style={[styles.sectionHeaderTitle, { color: colors.textSecondary }]}>Pengaturan Akun</Text>
            <View style={[styles.menuCardGroup, { backgroundColor: colors.card }]}>
@@ -241,7 +268,7 @@ export default function ProfileScreen() {
                     <Ionicons name="person-outline" size={20} color={colors.primary} />
                  </View>
                  <View style={styles.menuTextCol}>
-                    <Text style={[styles.menuItemTitle, { color: colors.text }]}>Informasi Pribadi</Text>
+                    <Text style={[styles.menuItemTitle, { color: colors.text }]}>{t('personal_info')}</Text>
                     <Text style={[styles.menuItemSub, { color: colors.textMuted }]}>Nama, Universitas, Jurusan</Text>
                  </View>
                  <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
@@ -252,7 +279,7 @@ export default function ProfileScreen() {
                     <Ionicons name="shield-checkmark-outline" size={20} color="#4F46E5" />
                  </View>
                  <View style={styles.menuTextCol}>
-                    <Text style={[styles.menuItemTitle, { color: colors.text }]}>Keamanan & Privasi</Text>
+                    <Text style={[styles.menuItemTitle, { color: colors.text }]}>{t('security')}</Text>
                     <Text style={[styles.menuItemSub, { color: colors.textMuted }]}>2FA, Biometrik</Text>
                  </View>
                  <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
@@ -263,7 +290,7 @@ export default function ProfileScreen() {
                     <Ionicons name="log-out-outline" size={20} color="#EF4444" />
                  </View>
                  <View style={styles.menuTextCol}>
-                    <Text style={[styles.menuItemTitle, { color: '#EF4444' }]}>Keluar Akun</Text>
+                    <Text style={[styles.menuItemTitle, { color: '#EF4444' }]}>{t('logout')}</Text>
                     <Text style={[styles.menuItemSub, { color: '#FCA5A5' }]}>Sesi Anda akan berakhir</Text>
                  </View>
                  <Ionicons name="chevron-forward" size={18} color="#FCA5A5" />
@@ -271,7 +298,7 @@ export default function ProfileScreen() {
            </View>
         </View>
 
-        {/* About App */}
+        {/* About App Section */}
         <View style={[styles.sectionWrapper, { marginBottom: 40 }]}>
            <Text style={[styles.sectionHeaderTitle, { color: colors.textSecondary }]}>Lainnya</Text>
            <View style={[styles.menuCardGroup, { backgroundColor: colors.card }]}>
@@ -283,7 +310,7 @@ export default function ProfileScreen() {
                     <Ionicons name="information-circle-outline" size={20} color={colors.textSecondary} />
                  </View>
                  <View style={styles.menuTextCol}>
-                    <Text style={[styles.menuItemTitle, { color: colors.text }]}>Tentang EduPartner AI</Text>
+                    <Text style={[styles.menuItemTitle, { color: colors.text }]}>{t('about')}</Text>
                     <Text style={[styles.menuItemSub, { color: colors.textMuted }]}>Versi 2.0.4</Text>
                  </View>
               </TouchableOpacity>
@@ -292,20 +319,20 @@ export default function ProfileScreen() {
 
       </ScrollView>
 
-      {/* Modern Personal Info Modal */}
+      {/* Personal Info Modal */}
       <Modal visible={personalInfoVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContainer, { backgroundColor: colors.card }]}>
+          <View style={styles.modalContainer}>
             <View style={styles.modalHandle} />
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Informasi Pribadi</Text>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>{t('personal_info')}</Text>
               <TouchableOpacity onPress={() => setPersonalInfoVisible(false)} style={styles.modalCloseBtn}>
                 <Ionicons name="close" size={22} color={colors.text} />
               </TouchableOpacity>
             </View>
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
               <View style={styles.modalField}>
-                <Text style={[styles.modalFieldLabel, { color: colors.textSecondary }]}>Nama Lengkap</Text>
+                <Text style={[styles.modalFieldLabel, { color: colors.textSecondary }]}>{t('fullname_label')}</Text>
                 <TextInput 
                   style={[styles.modalInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]} 
                   value={localDraft.name} 
@@ -313,7 +340,7 @@ export default function ProfileScreen() {
                 />
               </View>
               <View style={styles.modalField}>
-                <Text style={[styles.modalFieldLabel, { color: colors.textSecondary }]}>Universitas</Text>
+                <Text style={[styles.modalFieldLabel, { color: colors.textSecondary }]}>{t('university_label')}</Text>
                 <TextInput 
                   style={[styles.modalInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]} 
                   value={localDraft.university} 
@@ -321,7 +348,7 @@ export default function ProfileScreen() {
                 />
               </View>
               <View style={styles.modalField}>
-                <Text style={[styles.modalFieldLabel, { color: colors.textSecondary }]}>Jurusan</Text>
+                <Text style={[styles.modalFieldLabel, { color: colors.textSecondary }]}>{t('major_label')}</Text>
                 <TextInput 
                   style={[styles.modalInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]} 
                   value={localDraft.major} 
@@ -329,20 +356,20 @@ export default function ProfileScreen() {
                 />
               </View>
               <TouchableOpacity style={[styles.modalSaveBtn, { backgroundColor: colors.primary }]} onPress={handleSavePersonalInfo}>
-                <Text style={styles.modalSaveBtnText}>Simpan Perubahan</Text>
+                <Text style={styles.modalSaveBtnText}>{t('save_changes')}</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
         </View>
       </Modal>
 
-      {/* Modern Security Modal */}
+      {/* Security Modal */}
       <Modal visible={securityVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContainer, { backgroundColor: colors.card }]}>
+          <View style={styles.modalContainer}>
             <View style={styles.modalHandle} />
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Keamanan</Text>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>{t('security')}</Text>
               <TouchableOpacity onPress={() => setSecurityVisible(false)} style={styles.modalCloseBtn}>
                 <Ionicons name="close" size={22} color={colors.text} />
               </TouchableOpacity>
@@ -352,8 +379,8 @@ export default function ProfileScreen() {
                  <View style={styles.securityItemLeft}>
                     <Ionicons name="shield-checkmark" size={22} color={colors.primary} />
                     <View style={{ marginLeft: 16 }}>
-                       <Text style={[styles.menuItemTitle, { color: colors.text }]}>Autentikasi 2 Faktor</Text>
-                       <Text style={[styles.menuItemSub, { color: colors.textMuted }]}>Keamanan ekstra untuk akun Anda</Text>
+                       <Text style={[styles.menuItemTitle, { color: colors.text }]}>{t('two_fa_label')}</Text>
+                       <Text style={[styles.menuItemSub, { color: colors.textMuted }]}>{t('extra_security_desc')}</Text>
                     </View>
                  </View>
                  <Switch value={twoFAEnabled} onValueChange={setTwoFAEnabled} trackColor={{ false: '#D1D5DB', true: colors.primary + '80' }} />
@@ -362,8 +389,8 @@ export default function ProfileScreen() {
                  <View style={styles.securityItemLeft}>
                     <Ionicons name="finger-print" size={22} color={colors.primary} />
                     <View style={{ marginLeft: 16 }}>
-                       <Text style={[styles.menuItemTitle, { color: colors.text }]}>Login Biometrik</Text>
-                       <Text style={[styles.menuItemSub, { color: colors.textMuted }]}>Masuk cepat dengan sidik jari/wajah</Text>
+                       <Text style={[styles.menuItemTitle, { color: colors.text }]}>{t('biometric_label')}</Text>
+                       <Text style={[styles.menuItemSub, { color: colors.textMuted }]}>{t('quick_login_desc')}</Text>
                     </View>
                  </View>
                  <Switch value={biometricEnabled} onValueChange={setBiometricEnabled} trackColor={{ false: '#D1D5DB', true: colors.primary + '80' }} />
@@ -371,6 +398,47 @@ export default function ProfileScreen() {
             </View>
           </View>
         </View>
+      </Modal>
+
+      {/* Language Selection Modal */}
+      <Modal visible={languageModalVisible} animationType="fade" transparent>
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setLanguageModalVisible(false)}
+        >
+          <View style={[styles.languageModal, { backgroundColor: colors.card }]}>
+            <Text style={[styles.modalTitle, { color: colors.text, marginBottom: 20, textAlign: 'center' }]}>
+              {t('language')}
+            </Text>
+            
+            {[
+              { id: 'id', name: 'Bahasa Indonesia', flag: '🇮🇩' },
+              { id: 'en', name: 'English', flag: '🇺🇸' },
+            ].map((lang) => (
+              <TouchableOpacity
+                key={lang.id}
+                style={[
+                  styles.languageOption,
+                  language === lang.id && { backgroundColor: colors.primary + '10', borderColor: colors.primary }
+                ]}
+                onPress={async () => {
+                  setLanguage(lang.id as LanguageType);
+                  setLanguageModalVisible(false);
+                  if (currentUser) {
+                    await updateBackendProfile({ id: currentUser._id, language: lang.id as any });
+                  }
+                }}
+              >
+                <Text style={styles.languageFlag}>{lang.flag}</Text>
+                <Text style={[styles.languageName, { color: colors.text }]}>{lang.name}</Text>
+                {language === lang.id && (
+                  <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
       </Modal>
     </SafeAreaView>
   );
@@ -466,8 +534,8 @@ const styles = StyleSheet.create({
   menuTextCol: { flex: 1 },
   menuItemTitle: { fontSize: 15, fontWeight: '700' },
   menuItemSub: { fontSize: 12, marginTop: 2, fontWeight: '500' },
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  modalContainer: { borderTopLeftRadius: 36, borderTopRightRadius: 36, paddingHorizontal: 24, paddingTop: 12, paddingBottom: 30, maxHeight: '90%' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'center', alignItems: 'center' },
+  modalContainer: { borderTopLeftRadius: 36, borderTopRightRadius: 36, paddingHorizontal: 24, paddingTop: 12, paddingBottom: 30, maxHeight: '90%', width: '100%', position: 'absolute', bottom: 0, backgroundColor: '#FFF' },
   modalHandle: { width: 40, height: 5, backgroundColor: '#E5E7EB', borderRadius: 3, alignSelf: 'center', marginBottom: 16 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 },
   modalTitle: { fontSize: 22, fontWeight: '900', letterSpacing: -0.5 },
@@ -480,4 +548,33 @@ const styles = StyleSheet.create({
   securityModalContent: { paddingBottom: 20 },
   securityItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 20, borderBottomWidth: 1 },
   securityItemLeft: { flexDirection: 'row', alignItems: 'center', flex: 1 },
+  // Language Modal Styles
+  languageModal: {
+    width: width * 0.85,
+    padding: 24,
+    borderRadius: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  languageOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    marginBottom: 8,
+    gap: 12,
+  },
+  languageFlag: {
+    fontSize: 24,
+  },
+  languageName: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });

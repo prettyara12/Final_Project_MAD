@@ -3,18 +3,21 @@ import { View, Text, TouchableOpacity, StyleSheet, Platform, Keyboard } from 're
 import { Ionicons } from '@expo/vector-icons';
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { useTheme } from '../context/ThemeContext';
+import { useLanguage } from '../context/LanguageContext';
 
-const TABS_CONFIG = [
-  { id: 'TutorDashboardScreen', label: 'Beranda', iconActive: 'home', iconInactive: 'home-outline' },
-  { id: 'RequestsScreen', label: 'Permintaan', iconActive: 'mail', iconInactive: 'mail-outline' },
-  { id: 'TutorChatListScreen', label: 'Pesan', iconActive: 'chatbubbles', iconInactive: 'chatbubbles-outline' },
-  { id: 'TutorSessionsScreen', label: 'Sesi', iconActive: 'calendar', iconInactive: 'calendar-outline' },
-  { id: 'TutorProfileScreen', label: 'Profil', iconActive: 'person', iconInactive: 'person-outline' },
+const getTabsConfig = (t: any) => [
+  { id: 'TutorDashboardScreen', label: t('tab_home'), iconActive: 'home', iconInactive: 'home-outline' },
+  { id: 'RequestsScreen', label: t('tab_requests'), iconActive: 'mail', iconInactive: 'mail-outline' },
+  { id: 'TutorChatListScreen', label: t('tab_messages'), iconActive: 'chatbubbles', iconInactive: 'chatbubbles-outline' },
+  { id: 'TutorSessionsScreen', label: t('tab_sessions'), iconActive: 'calendar', iconInactive: 'calendar-outline' },
+  { id: 'TutorProfileScreen', label: t('tab_profile'), iconActive: 'person', iconInactive: 'person-outline' },
 ] as const;
 
 export const TutorTabBar: React.FC<BottomTabBarProps> = ({ state, navigation, descriptors }) => {
   const [isKeyboardVisible, setKeyboardVisible] = React.useState(false);
   const { colors } = useTheme();
+  const { t } = useLanguage();
+  const TABS_CONFIG = getTabsConfig(t);
 
   React.useEffect(() => {
     const showSubscription = Keyboard.addListener(

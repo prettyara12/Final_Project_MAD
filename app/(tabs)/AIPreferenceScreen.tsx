@@ -18,6 +18,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useProfile } from '../../context/ProfileContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 const { width } = Dimensions.get('window');
 
@@ -29,6 +30,7 @@ export default function AIPreferenceScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { profileData } = useProfile();
+  const { t } = useLanguage();
   
   // Convex Integration
   const currentUser = useQuery(api.users.getUserByEmail, { email: profileData.email });
@@ -37,19 +39,19 @@ export default function AIPreferenceScreen() {
   const [subject, setSubject] = useState('');
   const [topic, setTopic] = useState('');
   const [learningStyle, setLearningStyle] = useState('Visual');
-  const [preferredTime, setPreferredTime] = useState('Afternoon');
+  const [preferredTime, setPreferredTime] = useState('Morning');
   const [difficulty, setDifficulty] = useState('Intermediate');
   const [notes, setNotes] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async () => {
     if (!subject.trim()) {
-      Alert.alert('Error', 'Silakan masukkan mata pelajaran yang dicari.');
+      Alert.alert('Error', t('error_subject_required') || 'Silakan masukkan mata pelajaran yang dicari.');
       return;
     }
 
     if (!currentUser) {
-      Alert.alert('Error', 'Gagal memverifikasi user. Silakan coba lagi.');
+      Alert.alert('Error', t('error_verify_user'));
       return;
     }
 
@@ -75,7 +77,7 @@ export default function AIPreferenceScreen() {
         }
       } as any);
     } catch (error) {
-      Alert.alert('Error', 'Gagal menyimpan preferensi. Silakan coba lagi.');
+      Alert.alert('Error', t('error_save_pref'));
     } finally {
       setIsLoading(false);
     }
@@ -94,7 +96,7 @@ export default function AIPreferenceScreen() {
           onPress={() => setter(opt)}
         >
           <Text style={[styles.optionText, { color: current === opt ? '#FFF' : colors.textSecondary }]}>
-            {opt}
+            {t(`opt_${opt.toLowerCase()}`) || opt}
           </Text>
         </TouchableOpacity>
       ))}
@@ -107,7 +109,7 @@ export default function AIPreferenceScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>AI Search Preferences</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('ai_search_pref')}</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -115,18 +117,18 @@ export default function AIPreferenceScreen() {
         <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={styles.sectionHeader}>
             <Ionicons name="sparkles" size={20} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Sesuaikan Belajarmu</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('customize_learning')}</Text>
           </View>
           <Text style={[styles.sectionDesc, { color: colors.textSecondary }]}>
-            AI kami akan mencarikan tutor terbaik berdasarkan preferensi belajarmu.
+            {t('ai_find_tutor_desc')}
           </Text>
 
           {/* Subject Input */}
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>Mata Pelajaran</Text>
+            <Text style={[styles.label, { color: colors.text }]}>{t('subject_label')}</Text>
             <TextInput 
               style={[styles.input, { backgroundColor: colors.surfaceAlt, borderColor: colors.border, color: colors.text }]}
-              placeholder="Contoh: Kalkulus, Fisika, UI/UX"
+              placeholder={t('subject_placeholder')}
               placeholderTextColor={colors.textMuted}
               value={subject}
               onChangeText={setSubject}
@@ -135,10 +137,10 @@ export default function AIPreferenceScreen() {
 
           {/* Topic Input */}
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>Topik / Materi (Opsional)</Text>
+            <Text style={[styles.label, { color: colors.text }]}>{t('topic_label')}</Text>
             <TextInput 
               style={[styles.input, { backgroundColor: colors.surfaceAlt, borderColor: colors.border, color: colors.text }]}
-              placeholder="Contoh: Turunan, Newton's Law, Typography"
+              placeholder={t('topic_placeholder')}
               placeholderTextColor={colors.textMuted}
               value={topic}
               onChangeText={setTopic}
@@ -147,28 +149,28 @@ export default function AIPreferenceScreen() {
 
           {/* Learning Style */}
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>Gaya Belajar</Text>
+            <Text style={[styles.label, { color: colors.text }]}>{t('learning_style_label')}</Text>
             {renderOption(LEARNING_STYLES, learningStyle, setLearningStyle)}
           </View>
 
           {/* Preferred Time */}
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>Waktu Pilihan</Text>
+            <Text style={[styles.label, { color: colors.text }]}>{t('time_pref_label')}</Text>
             {renderOption(TIMES, preferredTime, setPreferredTime)}
           </View>
 
           {/* Difficulty */}
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>Tingkat Kesulitan</Text>
+            <Text style={[styles.label, { color: colors.text }]}>{t('difficulty_label')}</Text>
             {renderOption(DIFFICULTY_LEVELS, difficulty, setDifficulty)}
           </View>
 
           {/* Additional Notes */}
           <View style={styles.inputGroup}>
-            <Text style={[styles.label, { color: colors.text }]}>Catatan Tambahan</Text>
+            <Text style={[styles.label, { color: colors.text }]}>{t('additional_notes')}</Text>
             <TextInput 
               style={[styles.input, styles.textArea, { backgroundColor: colors.surfaceAlt, borderColor: colors.border, color: colors.text }]}
-              placeholder="Sebutkan kebutuhan spesifikmu..."
+              placeholder={t('notes_placeholder')}
               placeholderTextColor={colors.textMuted}
               multiline
               numberOfLines={4}
@@ -187,7 +189,7 @@ export default function AIPreferenceScreen() {
             ) : (
               <>
                 <Ionicons name="search" size={20} color="#FFF" style={{ marginRight: 8 }} />
-                <Text style={styles.submitButtonText}>Cari Tutor Terbaik</Text>
+                <Text style={styles.submitButtonText}>{t('find_best_tutor')}</Text>
               </>
             )}
           </TouchableOpacity>

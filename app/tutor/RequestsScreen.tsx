@@ -14,6 +14,7 @@ import { api } from '../../convex/_generated/api';
 import { useProfile } from '../../context/ProfileContext';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { Ionicons } from '@expo/vector-icons';
 import { RequestCard } from '../../components/RequestCard';
 
@@ -21,6 +22,7 @@ export default function RequestsScreen() {
   const router = useRouter();
   const { profileData } = useProfile();
   const { colors } = useTheme();
+  const { t } = useLanguage();
   
   const user = useQuery(api.users.getUserByEmail, profileData?.email ? { email: profileData.email } : "skip");
   const tutorId = user?._id;
@@ -33,18 +35,18 @@ export default function RequestsScreen() {
   const handleAccept = async (sessionId: any) => {
     try {
       const conversationId = await acceptRequest({ sessionId });
-      Alert.alert("Berhasil", "Permintaan diterima!");
+      Alert.alert("Success", t('accept_request_success'));
       router.push(`/chat/${conversationId}` as any);
     } catch (e) {
       console.error(e);
-      Alert.alert("Error", "Gagal memproses permintaan.");
+      Alert.alert("Error", t('process_request_error'));
     }
   };
 
   const handleReject = async (sessionId: any) => {
     try {
       await rejectRequest({ sessionId });
-      Alert.alert("Berhasil", "Permintaan ditolak.");
+      Alert.alert("Success", t('reject_request_success'));
     } catch (e) {
       console.error(e);
       Alert.alert("Error", "Gagal memproses permintaan.");
@@ -73,7 +75,7 @@ export default function RequestsScreen() {
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Permintaan Masuk</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('incoming_requests')}</Text>
         <View style={[styles.badge, { backgroundColor: colors.primaryLight }]}>
           <Text style={[styles.badgeText, { color: colors.primary }]}>{pendingRequests?.length || 0}</Text>
         </View>
@@ -90,8 +92,8 @@ export default function RequestsScreen() {
             <View style={[styles.emptyIconCircle, { backgroundColor: colors.surface }]}>
               <Ionicons name="mail-open-outline" size={40} color={colors.textMuted} />
             </View>
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>Belum ada permintaan masuk</Text>
-            <Text style={[styles.emptySubtext, { color: colors.textMuted }]}>Permintaan dari siswa akan muncul di sini</Text>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>{t('no_incoming_requests')}</Text>
+            <Text style={[styles.emptySubtext, { color: colors.textMuted }]}>{t('student_requests_desc')}</Text>
           </View>
         }
       />

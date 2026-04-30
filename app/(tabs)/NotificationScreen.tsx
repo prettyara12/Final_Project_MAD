@@ -15,18 +15,19 @@ import { useTheme } from '../../context/ThemeContext';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useProfile } from '../../context/ProfileContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 // Helper to format timestamp
-const formatTime = (ts: number) => {
+const formatTime = (ts: number, t: any) => {
   const diff = Date.now() - ts;
   const mins = Math.floor(diff / 60000);
   const hours = Math.floor(mins / 60);
   const days = Math.floor(hours / 24);
 
-  if (mins < 1) return 'Baru saja';
-  if (mins < 60) return `${mins} mnt lalu`;
-  if (hours < 24) return `${hours} jam lalu`;
-  return `${days} hari lalu`;
+  if (mins < 1) return t('just_now');
+  if (mins < 60) return t('mins_ago').replace('{n}', mins);
+  if (hours < 24) return t('hours_ago').replace('{n}', hours);
+  return t('days_ago').replace('{n}', days);
 };
 
 // Helper to get icon based on type
@@ -39,10 +40,55 @@ const getIconInfo = (type: string) => {
   }
 };
 
+// Helper to translate notification content
+const translateNotification = (title: string, description: string, t: any) => {
+  let translatedTitle = title;
+  let translatedDesc = description;
+
+  // Handle new format: key|param1:val1,param2:val2
+  if (description.includes('|')) {
+    const [key, paramsStr] = description.split('|');
+    const params: Record<string, string> = {};
+    paramsStr.split(',').forEach(p => {
+      const [k, v] = p.split(':');
+      if (k === 'subject') {
+        // Translate subject if it's a known subject
+        params[k] = t(`subject_${v.toLowerCase().replace(/\s+/g, '_')}`);
+      } else {
+        params[k] = v;
+      }
+    });
+    translatedTitle = t(title);
+    translatedDesc = t(key, params);
+    return { title: translatedTitle, description: translatedDesc };
+  }
+
+  // Handle legacy hardcoded Indonesian strings
+  const legacyTitles: Record<string, string> = {
+    'Permintaan Sesi Baru': 'notif_new_request_title',
+    'Pesanan Sesi Terkirim': 'notif_booking_sent_title',
+    'Sesi Dikonfirmasi': 'notif_session_confirmed_title',
+    'Sesi Ditolak': 'notif_session_rejected_title'
+  };
+
+  if (legacyTitles[title]) {
+    translatedTitle = t(legacyTitles[title]);
+    
+    // Try to parse subject from legacy descriptions
+    // Example: "Tutor {name} telah menerima pesanan sesi {subject} kamu pada {date} {time}."
+    // This is harder, so we'll just do a simple string replacement for "General Study" if found
+    translatedDesc = description.replace(/General Study/g, t('subject_general_study'));
+    translatedDesc = translatedDesc.replace(/Siswa/g, t('role_learner'));
+  }
+
+  return { title: translatedTitle, description: translatedDesc };
+};
+
 export default function NotificationScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const { profileData } = useProfile();
+  const { t } = useLanguage();
 
   // Convex Integration
   const user = useQuery(api.users.getUserByEmail, { email: profileData.email });
@@ -60,14 +106,14 @@ export default function NotificationScreen() {
   const handleMarkAllRead = useCallback(async () => {
     if (!user) return;
     if (newNotifications.length === 0) {
-      Alert.alert('Info', 'Tidak ada notifikasi baru untuk ditandai.');
+      Alert.alert(t('info'), t('no_new_notif_alert'));
       return;
     }
     try {
       await markAllAsRead({ userId: user._id });
-      Alert.alert('Sukses', 'Semua notifikasi ditandai sebagai dibaca.');
+      Alert.alert(t('success'), t('all_marked_read_alert'));
     } catch (e) {
-      Alert.alert('Error', 'Gagal memperbarui notifikasi.');
+      Alert.alert(t('error'), t('update_notif_error'));
     }
   }, [user, newNotifications, markAllAsRead]);
 
@@ -79,8 +125,9 @@ export default function NotificationScreen() {
     if (!notif.read) {
       await markAsRead({ id: notif._id });
     }
-    Alert.alert(notif.title, notif.description, [{ text: 'Tutup' }]);
-  }, [markAsRead]);
+    const { title, description } = translateNotification(notif.title, notif.description, t);
+    Alert.alert(title, description, [{ text: t('close') }]);
+  }, [markAsRead, t]);
 
   return (
     <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
@@ -95,7 +142,7 @@ export default function NotificationScreen() {
         </View>
         <TouchableOpacity 
           style={styles.notificationBtn}
-          onPress={() => Alert.alert('Notifikasi', 'Kamu sedang berada di halaman notifikasi.')}
+          onPress={() => Alert.alert(t('notifications'), t('at_notifications_page'))}
         >
           <Ionicons name="notifications" size={20} color={colors.primary} />
           {newNotifications.length > 0 && (
@@ -110,9 +157,9 @@ export default function NotificationScreen() {
       {silentMode && (
         <View style={styles.silentBanner}>
           <Ionicons name="volume-mute" size={16} color="#FFF" />
-          <Text style={styles.silentBannerText}>Mode Senyap aktif — notifikasi dibisukan 2 jam</Text>
+          <Text style={styles.silentBannerText}>{t('silent_mode_active_banner')}</Text>
           <TouchableOpacity onPress={handleToggleSilentMode}>
-            <Text style={styles.silentBannerOff}>Matikan</Text>
+            <Text style={styles.silentBannerOff}>{t('turn_off')}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -121,19 +168,19 @@ export default function NotificationScreen() {
         
         {/* Title Intro */}
         <View style={styles.titleSection}>
-          <Text style={[styles.mainTitle, { color: colors.text }]}>Notifikasi</Text>
+          <Text style={[styles.mainTitle, { color: colors.text }]}>{t('notifications')}</Text>
           <Text style={[styles.mainDesc, { color: colors.textSecondary }]}>
-            Tetap terupdate dengan perjalanan belajar dan wawasan AI-mu.
+            {t('notifications_subtitle')}
           </Text>
         </View>
 
         {/* Filters/Actions */}
         <View style={styles.filterRow}>
            <Text style={[styles.filterLabel, { color: colors.textSecondary }]}>
-             ALERT BARU {newNotifications.length > 0 ? `(${newNotifications.length})` : ''}
+             {t('new_alerts')} {newNotifications.length > 0 ? `(${newNotifications.length})` : ''}
            </Text>
            <TouchableOpacity onPress={handleMarkAllRead} activeOpacity={0.6}>
-             <Text style={styles.markReadText}>Tandai semua telah dibaca</Text>
+             <Text style={styles.markReadText}>{t('mark_all_read')}</Text>
            </TouchableOpacity>
         </View>
         {/* New Notifications */}
@@ -154,16 +201,18 @@ export default function NotificationScreen() {
                       </View>
                       
                       <View style={styles.cardTitleContainer}>
-                         <Text style={[styles.cardTitle, { color: colors.text }]}>{notif.title}</Text>
+                         <Text style={[styles.cardTitle, { color: colors.text }]}>
+                           {translateNotification(notif.title, notif.description, t).title}
+                         </Text>
                       </View>
                       
-                      <Text style={[styles.cardTimestamp, { color: colors.textSecondary }]}>
-                        {formatTime(notif.createdAt)}
+                       <Text style={[styles.cardTimestamp, { color: colors.textSecondary }]}>
+                        {formatTime(notif.createdAt, t)}
                       </Text>
                    </View>
 
                    <Text style={[styles.cardDesc, { color: colors.textSecondary }]}>
-                      {notif.description}
+                      {translateNotification(notif.title, notif.description, t).description}
                    </Text>
                 </TouchableOpacity>
                );
@@ -172,14 +221,14 @@ export default function NotificationScreen() {
         ) : (
           <View style={styles.emptyNewBox}>
             <Ionicons name="checkmark-done-circle-outline" size={40} color="#10B981" />
-            <Text style={[styles.emptyNewText, { color: colors.text }]}>Semua notifikasi telah dibaca! 🎉</Text>
-            <Text style={[styles.emptyNewSubtext, { color: colors.textSecondary }]}>Tidak ada alert baru saat ini.</Text>
+            <Text style={[styles.emptyNewText, { color: colors.text }]}>{t('all_notifications_read')}</Text>
+            <Text style={[styles.emptyNewSubtext, { color: colors.textSecondary }]}>{t('no_new_notifications')}</Text>
           </View>
         )}
 
         {/* Previous Label */}
         {oldNotifications.length > 0 && (
-          <Text style={[styles.kemarinLabel, { color: colors.textSecondary }]}>SEBELUMNYA</Text>
+          <Text style={[styles.kemarinLabel, { color: colors.textSecondary }]}>{t('previous')}</Text>
         )}
 
         {/* Old Notifications */}
@@ -199,14 +248,18 @@ export default function NotificationScreen() {
                     </View>
                     
                     <View style={styles.cardTitleContainer}>
-                       <Text style={[styles.cardTitleRead, { color: colors.textSecondary }]}>{notif.title}</Text>
+                       <Text style={[styles.cardTitleRead, { color: colors.textSecondary }]}>
+                         {translateNotification(notif.title, notif.description, t).title}
+                       </Text>
                     </View>
-                    <Text style={[styles.cardTimestamp, { color: colors.textSecondary, fontSize: 9 }]}>
-                      {formatTime(notif.createdAt)}
+                     <Text style={[styles.cardTimestamp, { color: colors.textSecondary, fontSize: 9 }]}>
+                      {formatTime(notif.createdAt, t)}
                     </Text>
                     <Ionicons name="chevron-forward" size={16} color={colors.border} />
                  </View>
-                 <Text style={[styles.cardDescRead, { color: colors.textSecondary }]}>{notif.description}</Text>
+                 <Text style={[styles.cardDescRead, { color: colors.textSecondary }]}>
+                   {translateNotification(notif.title, notif.description, t).description}
+                 </Text>
               </TouchableOpacity>
              );
            })}
@@ -218,17 +271,17 @@ export default function NotificationScreen() {
           { backgroundColor: colors.card, borderColor: colors.border },
           silentMode && styles.silentModeCardActive
         ]}>
-           <View style={styles.silentHeaderRow}>
-             <View>
-               <Text style={[styles.silentModeTitle, { color: colors.text }]}>Mode Senyap</Text>
-               <Text style={[styles.silentModeDesc, { color: colors.textSecondary }]}>
-                 {silentMode 
-                   ? 'Mode senyap sedang aktif. Semua notifikasi dibisukan selama 2 jam.'
-                   : 'Bisukan semua notifikasi selama 2 jam ke depan untuk masuk ke Deep Work.'
-                 }
-               </Text>
-             </View>
-           </View>
+            <View style={styles.silentHeaderRow}>
+              <View>
+                <Text style={[styles.silentModeTitle, { color: colors.text }]}>{t('silent_mode')}</Text>
+                <Text style={[styles.silentModeDesc, { color: colors.textSecondary }]}>
+                  {silentMode 
+                    ? t('silent_mode_active_desc')
+                    : t('silent_mode_desc')
+                  }
+                </Text>
+              </View>
+            </View>
            <TouchableOpacity 
              style={[styles.silentModeBtn, silentMode && styles.silentModeBtnActive]}
              onPress={handleToggleSilentMode}
@@ -241,7 +294,7 @@ export default function NotificationScreen() {
                 style={{ marginRight: 6 }}
               />
               <Text style={[styles.silentModeBtnText, silentMode && styles.silentModeBtnTextActive]}>
-                {silentMode ? 'Matikan Mode Senyap' : 'Aktifkan Fokus'}
+                {silentMode ? t('turn_off_silent_mode') : t('activate_focus')}
               </Text>
            </TouchableOpacity>
         </View>

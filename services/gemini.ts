@@ -26,15 +26,20 @@ Constraint:
 - Keep responses concise but informative.
 `;
 
-export async function getGeminiResponse(userMessage: string, history: { role: "user" | "model"; parts: { text: string }[] }[] = []) {
+export async function getGeminiResponse(
+  userMessage: string, 
+  history: { role: "user" | "model"; parts: { text: string }[] }[] = [],
+  modelName: string = "gemma-3-27b-it",
+  appLanguage: string = "id"
+) {
   if (!API_KEY) {
-    console.error("Gemini API Key is missing! Check your .env.local file.");
+    console.warn("Gemini API Key is missing! Check your .env.local file.");
     return "Konfigurasi AI belum lengkap. Silakan hubungi admin.";
   }
 
   try {
     const model = genAI.getGenerativeModel({
-      model: "gemma-3-27b-it"
+      model: modelName
     });
 
     let validHistory: any[] = [];
@@ -53,9 +58,22 @@ export async function getGeminiResponse(userMessage: string, history: { role: "u
 
     const contents = [...validHistory, { role: "user", parts: [{ text: userMessage }] }];
 
+    const languageMap: any = {
+      'id': 'Bahasa Indonesia',
+      'en': 'English',
+      'zh': 'Mandarin Chinese (中文)'
+    };
+    const targetLang = languageMap[appLanguage] || 'Bahasa Indonesia';
+
     // Inject system instruction into the first user message manually
     if (contents.length > 0 && contents[0].role === "user") {
       contents[0].parts[0].text = `System Instruction:\n${SYSTEM_PROMPT}\n\nUser Request:\n${contents[0].parts[0].text}`;
+    }
+
+    // Force language on the latest message to overcome any history language bias
+    const lastIdx = contents.length - 1;
+    if (lastIdx >= 0 && contents[lastIdx].role === "user") {
+      contents[lastIdx].parts[0].text = `${contents[lastIdx].parts[0].text}\n\n[SYSTEM INSTRUCTION: You MUST respond to this message strictly in ${targetLang}, regardless of the language used in previous messages.]`;
     }
 
     const timeoutPromise = new Promise<never>((_, reject) => {
@@ -70,7 +88,7 @@ export async function getGeminiResponse(userMessage: string, history: { role: "u
     const response = await result.response;
     return response.text();
   } catch (error: any) {
-    console.error("Gemini API Error details:", error);
+    console.warn("Gemini API Error details:", error.message);
 
     // Deteksi error limit (quota/token) atau overload (high demand)
     const errorMessage = error?.message || "";
@@ -97,8 +115,15 @@ export async function getTutorRecommendation(studentNeeds: {
   learningStyle?: string;
   preferredTime: string;
   notes?: string;
-}, tutors: any[]) {
+}, tutors: any[], appLanguage: string = 'id') {
   if (!API_KEY) return null;
+
+  const languageMap: any = {
+    'id': 'Bahasa Indonesia',
+    'en': 'English',
+    'zh': 'Mandarin Chinese (中文)'
+  };
+  const targetLang = languageMap[appLanguage] || 'Bahasa Indonesia';
 
   const prompt = `
 Recommend the best tutors based on the following student needs and available tutor data. 
@@ -106,7 +131,7 @@ Recommend the best tutors based on the following student needs and available tut
 CRITICAL RULES:
 1. PRIMARY MATCH: The tutor MUST teach "${studentNeeds.subject}". 
 2. EXCLUSION: If a tutor does NOT teach "${studentNeeds.subject}" (look at their Subjects list), DO NOT rank them in the top 5, even if they have a 5.0 rating.
-3. EXPLANATION: Write a brief, persuasive explanation in INDONESIAN. Mention why their expertise in "${studentNeeds.subject}" matches the student's needs.
+3. EXPLANATION: Write a brief, persuasive explanation in ${targetLang}. Mention why their expertise in "${studentNeeds.subject}" matches the student's needs.
 4. RANKING: Rank from 1 (best) to 5.
 
 Return ONLY a valid JSON array of objects:
@@ -114,7 +139,7 @@ Return ONLY a valid JSON array of objects:
   {
     "tutorId": "string (the tutor's _id)",
     "rank": number,
-    "explanation": "string (explanation in Indonesian)"
+    "explanation": "string (explanation in ${targetLang})"
   }
 ]
 
@@ -146,19 +171,26 @@ ${tutors.map(t => `- ID: ${t._id}, Name: ${t.user?.name || t.name}, Subjects: ${
     let text = response.text();
     text = text.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
     return JSON.parse(text);
-  } catch (error) {
-    console.error("Gemini Recommendation Error:", error);
+  } catch (error: any) {
+    console.warn("Gemini Recommendation Error:", error.message);
     return null;
   }
 }
 
-export async function generateStudyPlan(subject: string, goal: string, hoursPerDay: number, durationDays: number) {
+export async function generateStudyPlan(subject: string, goal: string, hoursPerDay: number, durationDays: number, appLanguage: string = 'id') {
   if (!API_KEY) {
-    console.error("Gemini API Key is missing!");
+    console.warn("Gemini API Key is missing!");
     return null;
   }
 
-  const prompt = `You are an expert AI Study Planner. Create a highly structured, day-by-day study plan for a student.
+  const languageMap: any = {
+    'id': 'Bahasa Indonesia',
+    'en': 'English',
+    'zh': 'Mandarin Chinese (中文)'
+  };
+  const targetLang = languageMap[appLanguage] || 'Bahasa Indonesia';
+
+  const prompt = `You are an expert AI Study Planner. Create a highly structured, day-by-day study plan for a student. Respond in ${targetLang}.
   
   Student Parameters:
   - Subject: ${subject}
@@ -201,15 +233,15 @@ export async function generateStudyPlan(subject: string, goal: string, hoursPerD
     let text = response.text();
     text = text.replace(/```json\s*/g, '').replace(/```\s*$/g, '').trim();
     return JSON.parse(text);
-  } catch (error) {
-    console.error("Gemini Study Planner Error:", error);
+  } catch (error: any) {
+    console.warn("Gemini Study Planner Error:", error.message);
     return null;
   }
 }
 
 export async function analyzeScannedText(scannedText: string, imageBase64?: string) {
   if (!API_KEY) {
-    console.error("Gemini API Key is missing!");
+    console.warn("Gemini API Key is missing!");
     return null;
   }
 
@@ -264,7 +296,7 @@ export async function analyzeScannedText(scannedText: string, imageBase64?: stri
     const response = await result.response;
     return response.text();
   } catch (error: any) {
-    console.error("Gemini Scanner Analysis Error (Gemma-3):", error);
+    console.warn("Gemini Scanner Analysis Error:", error.message);
     return "Maaf, terjadi kendala saat menganalisis gambar. Pastikan koneksi internet stabil dan coba lagi.";
   }
 }

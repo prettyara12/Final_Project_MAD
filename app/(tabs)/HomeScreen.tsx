@@ -19,6 +19,7 @@ import { useProfile } from '../../context/ProfileContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
+import { useLanguage } from '../../context/LanguageContext';
 import { getTutorRecommendation } from '../../services/gemini';
 
 const { width } = Dimensions.get('window');
@@ -27,6 +28,7 @@ export default function HomeScreen() {
   const router = useRouter();
   const { profileData } = useProfile();
   const { colors, isDark } = useTheme();
+  const { t, language } = useLanguage();
   
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -50,7 +52,7 @@ export default function HomeScreen() {
     learningStyle: "Visual", // Default learning style
   });
 
-  const recommendedGroups = useQuery(api.groups.getRecommendedGroups);
+
 
   const [aiInsights, setAiInsights] = useState<any[] | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -64,7 +66,7 @@ export default function HomeScreen() {
             subject: searchQuery || "Matematika",
             preferredTime: "08:00",
             learningStyle: "Visual"
-          }, recommendedTutors);
+          }, recommendedTutors, language as any);
           if (recommendations) setAiInsights(recommendations);
         } catch (e) {
           console.error("AI Insight Error:", e);
@@ -122,9 +124,9 @@ export default function HomeScreen() {
         
         {/* Greeting Section */}
         <View style={styles.greetingSection}>
-          <Text style={[styles.greetingText, { color: colors.text }]}>Hai, {(profileData?.name || 'Siswa').split(' ')[0]}!</Text>
+          <Text style={[styles.greetingText, { color: colors.text }]}>{t('hi_name', { name: (profileData?.name || t('student')).split(' ')[0] })}!</Text>
           <Text style={[styles.greetingSubtext, { color: colors.textSecondary }]}>
-            Siap menguasai keahlian baru hari ini? Biarkan AI memandu perjalanan belajarmu.
+            {t('ready_to_learn')} {t('ai_guide')}
           </Text>
           
           {/* Search Bar */}
@@ -132,13 +134,13 @@ export default function HomeScreen() {
             <Ionicons name="search" size={20} color={colors.textMuted} style={styles.searchIcon} />
             <TextInput 
               style={[styles.searchInput, { color: colors.text }]}
-              placeholder="Cari mata kuliah atau tutor..."
+              placeholder={t('search_placeholder')}
               placeholderTextColor={colors.textMuted}
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
             <TouchableOpacity style={[styles.searchButton, { backgroundColor: colors.primary }]}>
-              <Text style={styles.searchButtonText}>Cari</Text>
+              <Text style={styles.searchButtonText}>{t('search_btn')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -152,8 +154,8 @@ export default function HomeScreen() {
                 <Ionicons name="sparkles" size={20} color="#FFF" />
               </View>
               <View>
-                <Text style={[styles.aiSearchBtnTitle, { color: colors.text }]}>Find Tutor with AI</Text>
-                <Text style={[styles.aiSearchBtnSub, { color: colors.textSecondary }]}>Personalisasi pencarianmu sekarang</Text>
+                <Text style={[styles.aiSearchBtnTitle, { color: colors.text }]}>{t('find_tutor_ai')}</Text>
+                <Text style={[styles.aiSearchBtnSub, { color: colors.textSecondary }]}>{t('personalize_search')}</Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.primary} />
@@ -169,63 +171,20 @@ export default function HomeScreen() {
                 <Ionicons name="calendar" size={20} color="#FFF" />
               </View>
               <View>
-                <Text style={[styles.aiSearchBtnTitle, { color: colors.text }]}>AI Study Planner</Text>
-                <Text style={[styles.aiSearchBtnSub, { color: colors.textSecondary }]}>Buat jadwal belajar otomatis</Text>
+                <Text style={[styles.aiSearchBtnTitle, { color: colors.text }]}>{t('ai_study_planner')}</Text>
+                <Text style={[styles.aiSearchBtnSub, { color: colors.textSecondary }]}>{t('auto_schedule')}</Text>
               </View>
             </View>
             <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
-
-        {/* Recommended Groups */}
-        <View style={styles.sectionContainer}>
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Grup Belajar</Text>
-              <Text style={[styles.sectionSubtitle, { color: colors.textSecondary }]}>Belajar bersama teman lebih menyenangkan</Text>
-            </View>
-            <TouchableOpacity onPress={() => Alert.alert("Segera Hadir", "Fitur eksplorasi grup akan segera hadir!")}>
-              <Text style={[styles.linkText, { color: colors.primary }]}>Lihat Semua</Text>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.horizontalScrollContent}
-          >
-            {recommendedGroups === undefined ? (
-              <ActivityIndicator size="small" color={colors.primary} />
-            ) : (recommendedGroups || []).map((group: any) => (
-              <TouchableOpacity 
-                key={group._id} 
-                style={[styles.groupCardHome, { backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }]}
-              >
-                <View style={[styles.groupIconBoxHome, { backgroundColor: colors.primaryLight }]}>
-                  <Ionicons name="people" size={24} color={colors.primary} />
-                </View>
-                <Text style={[styles.groupTitleHome, { color: colors.text }]} numberOfLines={1}>{group.title}</Text>
-                <Text style={[styles.groupMetaHome, { color: colors.textSecondary }]}>{group.participants} Peserta • {group.tutorName}</Text>
-                
-                <View style={styles.groupAvatarsHome}>
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <View key={i} style={[styles.miniAvatarHome, { left: i * 15, zIndex: 10 - i, backgroundColor: colors.avatarBg, borderColor: colors.surface }]}>
-                      <Ionicons name="person" size={10} color="#FFF" />
-                    </View>
-                  ))}
-                </View>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
         {/* Upcoming Sessions */}
         <View style={styles.sectionContainer}>
           <View style={[styles.sectionHeader, { marginBottom: 16 }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Sesi Mendatang</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('upcoming_sessions')}</Text>
             <View style={[styles.badgeLightPurple, { backgroundColor: colors.primaryLight }]}>
-              <Text style={[styles.badgeLightPurpleText, { color: colors.primary }]}>{sessions?.length || 0} TOTAL</Text>
+              <Text style={[styles.badgeLightPurpleText, { color: colors.primary }]}>{sessions?.length || 0} {t('total_sessions')}</Text>
             </View>
           </View>
 
@@ -237,7 +196,7 @@ export default function HomeScreen() {
                 </View>
                 
                 <View style={styles.sessionDetails}>
-                  <Text style={[styles.sessionTitle, { color: colors.text }]}>{session.subject}</Text>
+                  <Text style={[styles.sessionTitle, { color: colors.text }]}>{t(`subject_${session.subject.toLowerCase().replace(/\s+/g, '_')}`)}</Text>
                   <Text style={[styles.sessionTimeInfo, { color: colors.textSecondary }]}>{session.time} • {session.tutor?.name}</Text>
                 </View>
 
@@ -249,7 +208,7 @@ export default function HomeScreen() {
           ) : (
             <View style={styles.emptySessionBox}>
               <Text style={styles.emptySessionText}>
-                {currentUser === null ? "Daftarkan akun untuk melihat sesi." : "Tidak ada sesi lain yang dijadwalkan"}
+                {currentUser === null ? t('register_to_see_sessions') : t('no_sessions')}
               </Text>
             </View>
           )}

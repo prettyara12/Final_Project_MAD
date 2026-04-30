@@ -15,19 +15,20 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 
 const { width } = Dimensions.get('window');
 
-const DATES = [
-  { day: 'SEN', date: '12', active: true },
-  { day: 'SEL', date: '13', active: false },
-  { day: 'RAB', date: '14', active: false },
-  { day: 'KAM', date: '15', active: false },
-  { day: 'JUM', date: '16', active: false },
-  { day: 'SAB', date: '17', disabled: true },
-  { day: 'MIN', date: '18', disabled: true },
+const getDates = (t: any) => [
+  { day: t('day_sen'), date: '12', active: true },
+  { day: t('day_sel'), date: '13', active: false },
+  { day: t('day_rab'), date: '14', active: false },
+  { day: t('day_kam'), date: '15', active: false },
+  { day: t('day_jum'), date: '16', active: false },
+  { day: t('day_sab'), date: '17', disabled: true },
+  { day: t('day_min'), date: '18', disabled: true },
 ];
 
 const TIMESLOTS = [
@@ -59,6 +60,9 @@ const REVIEWS = [
 export default function TutorProfileScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { t, language } = useLanguage();
+  
+  const DATES = getDates(t);
 
   // Convex Integration
   const { id, tutorId } = useLocalSearchParams();
@@ -70,7 +74,7 @@ export default function TutorProfileScreen() {
 
   const handleBookSession = () => {
     if (!tutor || !tutor.user) {
-      Alert.alert("Data Tidak Lengkap", "Maaf, data tutor tidak lengkap. Silakan coba lagi nanti.");
+      Alert.alert(t('incomplete_data'), t('tutor_data_incomplete_desc'));
       return;
     }
     router.push({
@@ -78,7 +82,7 @@ export default function TutorProfileScreen() {
       params: { 
         tutorId: String(tutor.user._id),
         tutorName: String(tutor.user.name),
-        subject: (tutor.subjects && tutor.subjects.length > 0) ? String(tutor.subjects[0]) : 'General'
+        subject: (tutor.subjects && tutor.subjects.length > 0) ? String(tutor.subjects[0]) : t('subject_general')
       }
     } as any);
   };
@@ -107,9 +111,9 @@ export default function TutorProfileScreen() {
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
         <Ionicons name="alert-circle-outline" size={64} color={colors.border} />
-        <Text style={[styles.tutorName, { color: colors.text, marginTop: 16 }]}>Tutor Tidak Ditemukan</Text>
+        <Text style={[styles.tutorName, { color: colors.text, marginTop: 16 }]}>{t('tutor_not_found_title')}</Text>
         <Text style={[styles.aboutText, { color: colors.textSecondary, textAlign: 'center', paddingHorizontal: 40 }]}>
-           Maaf, profil tutor yang Anda cari tidak dapat ditemukan atau sudah tidak tersedia.
+           {t('tutor_not_found_desc')}
         </Text>
         <TouchableOpacity 
           style={[styles.bookButton, { backgroundColor: colors.primary, width: 200, marginTop: 24 }]} 
@@ -145,7 +149,7 @@ export default function TutorProfileScreen() {
         {/* Top Profile Card */}
         <View style={[styles.heroCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={[styles.badgeTopLeft, { backgroundColor: colors.primaryLight }]}>
-            <Text style={[styles.badgeTopLeftText, { color: colors.primary }]}>TERATAS</Text>
+            <Text style={[styles.badgeTopLeftText, { color: colors.primary }]}>{t('top_tutor')}</Text>
           </View>
 
           <View style={styles.avatarWrapper}>
@@ -160,26 +164,26 @@ export default function TutorProfileScreen() {
             </View>
           </View>
 
-          <Text style={[styles.tutorName, { color: colors.text }]}>{tutor.user?.name || 'Tutor'}</Text>
+          <Text style={[styles.tutorName, { color: colors.text }]}>{tutor.user?.name || t('role_tutor')}</Text>
           <Text style={[styles.tutorSubject, { color: colors.textSecondary }]}>
-            {tutor.subjects && Array.isArray(tutor.subjects) ? tutor.subjects.join(' & ') : 'General'}
+            {tutor.subjects && Array.isArray(tutor.subjects) ? tutor.subjects.map((sub: string) => t(`subject_${sub.toLowerCase().replace(/\s+/g, '_')}`)).join(' & ') : t('subject_general')}
           </Text>
 
           <View style={styles.ratingRow}>
             {renderStars(Math.round(tutor.rating || 0))}
             <Text style={[styles.ratingScore, { color: colors.text }]}>{(tutor.rating || 0).toFixed(1)}</Text>
-            <Text style={[styles.ratingReviews, { color: colors.textSecondary }]}>(124 ulasan)</Text>
+            <Text style={[styles.ratingReviews, { color: colors.textSecondary }]}>{t('reviews_count_short').replace('{count}', '124')}</Text>
           </View>
 
           <View style={styles.statsRow}>
             <View style={styles.statBox}>
-              <Text style={styles.statLabel}>PENGALAMAN</Text>
-              <Text style={[styles.statValue, { color: colors.text }]}>8+ Tahun</Text>
+              <Text style={styles.statLabel}>{t('experience_label')}</Text>
+              <Text style={[styles.statValue, { color: colors.text }]}>8+ {t('years')}</Text>
             </View>
             <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
             <View style={styles.statBox}>
-              <Text style={styles.statLabel}>TARIF</Text>
-              <Text style={[styles.statValue, { color: colors.text }]}>$45/jam</Text>
+              <Text style={styles.statLabel}>{t('rate_label')}</Text>
+              <Text style={[styles.statValue, { color: colors.text }]}>$45/{t('hour')}</Text>
             </View>
           </View>
         </View>
@@ -188,7 +192,7 @@ export default function TutorProfileScreen() {
         <View style={[styles.cardSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.sectionTitleRow}>
             <Ionicons name="school" size={20} color={colors.primary} style={styles.sectionIcon} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Mata Kuliah Diajar</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('subjects_taught')}</Text>
           </View>
           
           <View style={styles.chipsContainer}>
@@ -196,13 +200,13 @@ export default function TutorProfileScreen() {
               <View key={idx} style={[styles.chipItem, { backgroundColor: colors.border }]}>
                 <Text style={[styles.chipText, { color: colors.textSecondary }]}>{sub}</Text>
               </View>
-            )) : <Text style={{color: colors.textMuted}}>Tidak ada subjek spesifik.</Text>}
+            )) : <Text style={{color: colors.textMuted}}>{t('no_specific_subjects')}</Text>}
           </View>
         </View>
 
         {/* About Section */}
         <View style={[styles.cardSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Tentang {tutor.user?.name}</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('about_tutor').replace('{name}', tutor.user?.name || '')}</Text>
           <Text style={[styles.aboutText, { color: colors.textSecondary }]}>
             {tutor.bio}
           </Text>
@@ -211,7 +215,7 @@ export default function TutorProfileScreen() {
         {/* Availability Section */}
         <View style={[styles.cardSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.availabilityHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Ketersediaan</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('availability_label')}</Text>
             <View style={styles.arrowsRow}>
               <TouchableOpacity style={styles.arrowBtn}><Ionicons name="chevron-back" size={16} color={colors.textSecondary} /></TouchableOpacity>
               <TouchableOpacity style={styles.arrowBtn}><Ionicons name="chevron-forward" size={16} color={colors.textSecondary} /></TouchableOpacity>
@@ -257,9 +261,9 @@ export default function TutorProfileScreen() {
         {/* Reviews Section */}
         <View style={[styles.cardSection, styles.lastSection, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.availabilityHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Ulasan Terbaru</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('latest_reviews')}</Text>
             <TouchableOpacity>
-              <Text style={[styles.linkText, { color: colors.primary }]}>Lihat Semua</Text>
+              <Text style={[styles.linkText, { color: colors.primary }]}>{t('view_all')}</Text>
             </TouchableOpacity>
           </View>
 
@@ -287,7 +291,7 @@ export default function TutorProfileScreen() {
       {/* Fixed Bottom Button */}
       <View style={[styles.bottomBar, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
         <TouchableOpacity style={[styles.bookButton, { backgroundColor: colors.primary }]} onPress={handleBookSession}>
-          <Text style={styles.bookButtonText}>Pesan Sesi</Text>
+          <Text style={styles.bookButtonText}>{t('confirm_booking')}</Text>
         </TouchableOpacity>
       </View>
 

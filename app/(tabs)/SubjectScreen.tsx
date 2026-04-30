@@ -9,7 +9,8 @@ import {
   TouchableOpacity,
   Dimensions,
   Platform,
-  ActivityIndicator
+  ActivityIndicator,
+  Image
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -17,6 +18,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useProfile } from '../../context/ProfileContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 const { width } = Dimensions.get('window');
 
@@ -24,6 +26,7 @@ export default function SubjectScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const { profileData } = useProfile();
+  const { t } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
 
   const currentUser = useQuery(api.users.getUserByEmail, profileData?.email ? { email: profileData.email } : "skip");
@@ -47,31 +50,41 @@ export default function SubjectScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
              <Ionicons name="arrow-back" size={24} color={colors.text} />
           </TouchableOpacity>
-          <View style={[styles.avatarMini, { backgroundColor: colors.avatarBg }]}>
-            <Ionicons name="person" size={16} color="#FFF" />
-          </View>
+          <TouchableOpacity 
+            onPress={() => router.push('/ProfileScreen' as any)}
+            style={[styles.avatarMini, { backgroundColor: colors.avatarBg, overflow: 'hidden' }]}
+          >
+            {profileData?.profileImage ? (
+              <Image source={{ uri: profileData.profileImage }} style={{ width: '100%', height: '100%' }} />
+            ) : (
+              <Ionicons name="person" size={16} color="#FFF" />
+            )}
+          </TouchableOpacity>
           <Text style={[styles.headerLogoText, { color: colors.primary }]}>EduPartner AI</Text>
         </View>
-        <TouchableOpacity 
-          style={styles.notificationBtn}
-          onPress={() => router.push('/NotificationScreen' as any)}
-        >
-          <Ionicons name="notifications" size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
+        
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+          <TouchableOpacity 
+            style={styles.notificationBtn}
+            onPress={() => router.push('/NotificationScreen' as any)}
+          >
+            <Ionicons name="notifications" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
         {/* Title Section */}
         <View style={styles.titleSection}>
-           <Text style={[styles.mainTitle, { color: colors.text }]}>Manajemen Sesi</Text>
-           <Text style={[styles.mainDesc, { color: colors.textSecondary }]}>Kelola semua jadwal belajarmu di satu tempat.</Text>
+           <Text style={[styles.mainTitle, { color: colors.text }]}>{t('sessions_title')}</Text>
+           <Text style={[styles.mainDesc, { color: colors.textSecondary }]}>{t('sessions_subtitle')}</Text>
            
            <View style={[styles.searchContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
              <Ionicons name="search" size={20} color={colors.textSecondary} />
              <TextInput 
                style={[styles.searchInput, { color: colors.text }]}
-               placeholder="Cari sesi atau nama partner..."
+               placeholder={t('search_placeholder')}
                placeholderTextColor={colors.textSecondary}
                value={searchQuery}
                onChangeText={setSearchQuery}
@@ -84,7 +97,7 @@ export default function SubjectScreen() {
           {filteredSessions === undefined ? (
             <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 40 }} />
           ) : filteredSessions.length === 0 ? (
-            <Text style={{ textAlign: 'center', color: colors.textSecondary, marginTop: 40 }}>Belum ada sesi yang ditemukan.</Text>
+            <Text style={{ textAlign: 'center', color: colors.textSecondary, marginTop: 40 }}>{t('no_sessions_found')}</Text>
           ) : (
             filteredSessions.map((session, idx) => {
               const isTutor = currentUser?.role === 'tutor';
@@ -102,22 +115,24 @@ export default function SubjectScreen() {
                         <Ionicons name="calendar-outline" size={20} color={statusColor} />
                      </View>
                      <View style={[styles.badgeBox, { backgroundColor: statusColor + '20' }]}>
-                       <Text style={[styles.badgeText, { color: statusColor }]}>{session.status.toUpperCase()}</Text>
+                       <Text style={[styles.badgeText, { color: statusColor }]}>{t(`status_${session.status}`).toUpperCase()}</Text>
                      </View>
                    </View>
 
-                   <Text style={[styles.subTitle, { color: colors.text }]}>{session.subject}</Text>
+                   <Text style={[styles.subTitle, { color: colors.text }]}>
+                     {t(`subject_${session.subject.toLowerCase().replace(/\s+/g, '_')}`)}
+                   </Text>
                    <Text style={[styles.subDesc, { color: colors.textSecondary }]}>
-                     {session.date} | {session.time} • {isTutor ? 'Siswa' : 'Tutor'}: {partnerName || 'Menunggu Info'}
+                     {session.date} | {session.time} • {isTutor ? t('role_learner') : t('role_tutor')}: {partnerName || t('waiting_for_info')}
                    </Text>
 
                    <View style={styles.actionsRow}>
-                     <TouchableOpacity 
-                       style={[styles.mainActionBtn, { backgroundColor: statusColor }]}
-                       onPress={() => router.push('/chat/ChatListScreen' as any)}
-                     >
-                       <Text style={styles.mainActionText}>Lihat Obrolan</Text>
-                     </TouchableOpacity>
+                      <TouchableOpacity 
+                        style={[styles.mainActionBtn, { backgroundColor: statusColor }]}
+                        onPress={() => router.push('/chat/ChatListScreen' as any)}
+                      >
+                        <Text style={styles.mainActionText}>{t('view_chat')}</Text>
+                      </TouchableOpacity>
                    </View>
                 </View>
               );
@@ -156,7 +171,6 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#1E293B',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 8,

@@ -11,10 +11,12 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function StudyPlanResultScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { t, language } = useLanguage();
   const params = useLocalSearchParams();
 
   let plan: any = null;
@@ -37,9 +39,9 @@ export default function StudyPlanResultScreen() {
   if (!plan || !plan.days) {
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background, justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={{ color: colors.text }}>Gagal memuat rencana belajar.</Text>
+        <Text style={{ color: colors.text }}>{t('failed_load_plan')}</Text>
         <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 20 }}>
-          <Text style={{ color: colors.primary }}>Kembali</Text>
+          <Text style={{ color: colors.primary }}>{t('go_back')}</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );
@@ -52,15 +54,15 @@ export default function StudyPlanResultScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
            <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Hasil Rencana</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('plan_result')}</Text>
         <View style={{ width: 24 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         
         <View style={styles.heroSection}>
-          <Text style={[styles.heroTitle, { color: colors.text }]}>{plan.title || `Rencana Belajar: ${params.subject}`}</Text>
-          <Text style={[styles.heroDesc, { color: colors.textSecondary }]}>{plan.overview || "Ikuti rencana terstruktur ini untuk mencapai tujuanmu."}</Text>
+          <Text style={[styles.heroTitle, { color: colors.text }]}>{plan.title || t('study_plan_for').replace('{subject}', (params.subject as string) || '')}</Text>
+          <Text style={[styles.heroDesc, { color: colors.textSecondary }]}>{plan.overview || t('plan_overview_default')}</Text>
         </View>
 
         <View style={styles.timelineContainer}>
@@ -77,10 +79,10 @@ export default function StudyPlanResultScreen() {
                 {/* Content Card */}
                 <View style={[styles.dayCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                   <View style={styles.dayHeader}>
-                    <Text style={[styles.dayLabel, { color: colors.primary }]}>HARI {day.dayNumber}</Text>
+                    <Text style={[styles.dayLabel, { color: colors.primary }]}>{`${t('day_label')} ${day.dayNumber}`}</Text>
                     <View style={[styles.hoursBadge, { backgroundColor: colors.primaryLight }]}>
                       <Ionicons name="time-outline" size={12} color={colors.primary} style={{ marginRight: 4 }} />
-                      <Text style={[styles.hoursText, { color: colors.primary }]}>{day.estimatedHours} Jam</Text>
+                      <Text style={[styles.hoursText, { color: colors.primary }]}>{day.estimatedHours} {t('hours_abbr')}</Text>
                     </View>
                   </View>
                   <Text style={[styles.dayTitle, { color: colors.text }]}>{day.title}</Text>
@@ -108,7 +110,7 @@ export default function StudyPlanResultScreen() {
           onPress={handleFindTutor}
         >
           <Ionicons name="search" size={20} color="#FFF" style={{ marginRight: 8 }} />
-          <Text style={styles.actionBtnText}>Cari Tutor Untuk Materi Ini</Text>
+          <Text style={styles.actionBtnText}>{t('find_tutor_topic')}</Text>
         </TouchableOpacity>
       </View>
 

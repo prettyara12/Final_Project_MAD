@@ -13,12 +13,14 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 const { width } = Dimensions.get('window');
 
 export default function ScanResultScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { t, language } = useLanguage();
   const params = useLocalSearchParams();
 
   const extractedText = (params.extractedText as string) || '';
@@ -28,7 +30,7 @@ export default function ScanResultScreen() {
   const handleAskMore = () => {
     router.push({
       pathname: '/(tabs)/AIChatScreen' as any,
-      params: { initialMessage: `Jelaskan lebih lanjut tentang: ${extractedText.substring(0, 100)}` }
+      params: { initialMessage: `${t('explain_more_about')}: ${extractedText.substring(0, 100)}` }
     });
   };
 
@@ -55,7 +57,7 @@ export default function ScanResultScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Hasil Analisis</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('analysis_result')}</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -74,7 +76,7 @@ export default function ScanResultScreen() {
             <View style={[styles.cardIconBox, { backgroundColor: '#DBEAFE' }]}>
               <Ionicons name="document-text" size={18} color="#3B82F6" />
             </View>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Instruksi Anda</Text>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>{t('your_instructions')}</Text>
           </View>
           <View style={[styles.extractedTextBox, { backgroundColor: colors.surface, borderColor: colors.border }]}>
             <Text style={[styles.extractedText, { color: colors.text }]}>{extractedText}</Text>
@@ -87,7 +89,7 @@ export default function ScanResultScreen() {
             <View style={[styles.cardIconBox, { backgroundColor: '#EEF2FF' }]}>
               <Ionicons name="sparkles" size={18} color="#4F46E5" />
             </View>
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Penjelasan AI</Text>
+            <Text style={[styles.cardTitle, { color: colors.text }]}>{t('ai_explanation')}</Text>
           </View>
           <Text style={[styles.analysisText, { color: colors.textSecondary }]}>{displayAnalysis}</Text>
         </View>
@@ -99,7 +101,7 @@ export default function ScanResultScreen() {
             onPress={handleAskMore}
           >
             <Ionicons name="chatbubble-ellipses" size={20} color="#FFF" style={{ marginRight: 8 }} />
-            <Text style={styles.actionBtnText}>Tanya Lebih Lanjut</Text>
+            <Text style={styles.actionBtnText}>{t('ask_more')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -107,7 +109,7 @@ export default function ScanResultScreen() {
             onPress={handleFindTutor}
           >
             <Ionicons name="search" size={20} color="#FFF" style={{ marginRight: 8 }} />
-            <Text style={styles.actionBtnText}>Cari Tutor untuk Topik Ini</Text>
+            <Text style={styles.actionBtnText}>{t('find_tutor_topic')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -115,7 +117,7 @@ export default function ScanResultScreen() {
             onPress={() => router.push('/(tabs)/ScannerScreen' as any)}
           >
             <Ionicons name="scan" size={20} color={colors.primary} style={{ marginRight: 8 }} />
-            <Text style={[styles.secondaryBtnText, { color: colors.primary }]}>Pindai Lagi</Text>
+            <Text style={[styles.secondaryBtnText, { color: colors.primary }]}>{t('scan_again')}</Text>
           </TouchableOpacity>
         </View>
 

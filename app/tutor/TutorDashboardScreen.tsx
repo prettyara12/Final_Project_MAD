@@ -15,6 +15,7 @@ import { api } from '../../convex/_generated/api';
 import { useProfile } from '../../context/ProfileContext';
 import { useTheme } from '../../context/ThemeContext';
 import { useTutorSettings } from '../../context/TutorSettingsContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { Ionicons } from '@expo/vector-icons';
 
 // Components
@@ -25,6 +26,7 @@ export default function TutorDashboardScreen() {
   const router = useRouter();
   const { profileData } = useProfile();
   const { colors } = useTheme();
+  const { t, language } = useLanguage();
   const { autoAccept } = useTutorSettings();
   
   // Get Tutor's internal ID via email
@@ -53,22 +55,22 @@ export default function TutorDashboardScreen() {
   const handleAccept = async (sessionId: any) => {
     try {
       const conversationId = await acceptRequest({ sessionId });
-      Alert.alert("Success", "Berhasil menerima permintaan!");
+      Alert.alert(t('berhasil'), t('accept_request_success'));
       // Auto navigate to chat
       router.push(`/chat/${conversationId}` as any);
     } catch (e) {
       console.error(e);
-      Alert.alert("Error", "Gagal memproses permintaan.");
+      Alert.alert(t('error'), t('process_request_error'));
     }
   };
 
   const handleReject = async (sessionId: any) => {
     try {
       await rejectRequest({ sessionId });
-      Alert.alert("Success", "Permintaan ditolak.");
+      Alert.alert(t('berhasil'), t('reject_request_success'));
     } catch (e) {
       console.error(e);
-      Alert.alert("Error", "Gagal memproses permintaan.");
+      Alert.alert(t('error'), t('process_request_error'));
     }
   };
 
@@ -77,7 +79,7 @@ export default function TutorDashboardScreen() {
     return (
       <SafeAreaView style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#4F46E5" />
-        <Text style={styles.loadingText}>Memuat Dashboard...</Text>
+        <Text style={styles.loadingText}>{t('loading_dashboard')}</Text>
       </SafeAreaView>
     );
   }
@@ -88,25 +90,27 @@ export default function TutorDashboardScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={[styles.greeting, { color: colors.textSecondary }]}>Halo, Tutor 👋</Text>
+            <Text style={[styles.greeting, { color: colors.textSecondary }]}>{t('tutor_greeting')}</Text>
             <Text style={[styles.name, { color: colors.text }]}>{profileData.name}</Text>
           </View>
-          <TouchableOpacity 
-            style={[styles.notifBtn, { backgroundColor: colors.primaryLight }]}
-            onPress={() => router.push('/NotificationScreen' as any)}
-          >
-             <Ionicons name="notifications-outline" size={24} color={colors.primary} />
-             {unreadCount > 0 && (
-               <View style={styles.notifBadgeCount}>
-                 <Text style={styles.notifBadgeCountText}>{unreadCount}</Text>
-               </View>
-             )}
-          </TouchableOpacity>
+          <View style={styles.headerRight}>
+            <TouchableOpacity 
+              style={[styles.notifBtn, { backgroundColor: colors.primaryLight }]}
+              onPress={() => router.push('/NotificationScreen' as any)}
+            >
+               <Ionicons name="notifications-outline" size={24} color={colors.primary} />
+               {unreadCount > 0 && (
+                 <View style={styles.notifBadgeCount}>
+                   <Text style={styles.notifBadgeCountText}>{unreadCount}</Text>
+                 </View>
+               )}
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Incoming Requests */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Permintaan Masuk</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('incoming_requests')}</Text>
           {pendingRequests === undefined ? (
             <ActivityIndicator size="small" color={colors.primary} />
           ) : pendingRequests.length === 0 ? (
@@ -114,15 +118,15 @@ export default function TutorDashboardScreen() {
               <View style={[styles.emptyIconCircle, { backgroundColor: colors.background }]}>
                  <Ionicons name="mail-open-outline" size={32} color={colors.textMuted} />
               </View>
-              <Text style={[styles.emptyTitle, { color: colors.text }]}>Belum ada permintaan masuk</Text>
-              <Text style={[styles.emptySubtext, { color: colors.textMuted }]}>Permintaan dari siswa akan muncul di sini</Text>
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>{t('no_incoming_requests')}</Text>
+              <Text style={[styles.emptySubtext, { color: colors.textMuted }]}>{t('student_requests_desc')}</Text>
             </View>
           ) : (
             pendingRequests.map((req: any) => (
               <RequestCard 
                 key={req._id}
-                studentName={req.learner?.name || 'Siswa Tanpa Nama'}
-                subject={req.subject}
+                studentName={req.learner?.name || t('student')}
+                subject={t(`subject_${req.subject.toLowerCase().replace(/\s+/g, '_')}`)}
                 time={`${req.date} | ${req.time}`}
                 onAccept={() => handleAccept(req._id)}
                 onReject={() => handleReject(req._id)}
@@ -133,18 +137,18 @@ export default function TutorDashboardScreen() {
 
         {/* Upcoming Sessions */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Sesi Mendatang</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('upcoming_sessions')}</Text>
           {upcomingSessions === undefined ? (
             <ActivityIndicator size="small" color={colors.primary} />
           ) : upcomingSessions.length === 0 ? (
-            <Text style={[styles.emptyText, { color: colors.textMuted }]}>Belum ada sesi terjadwal.</Text>
+            <Text style={[styles.emptyText, { color: colors.textMuted }]}>{t('no_scheduled_sessions')}</Text>
           ) : (
             upcomingSessions.map((session: any) => (
               <SessionCard 
                 key={session._id}
-                title={session.subject}
+                title={t(`subject_${session.subject.toLowerCase().replace(/\s+/g, '_')}`)}
                 time={`${session.date} | ${session.time}`}
-                tutor={session.learner?.name || 'Siswa'} // Reusing SessionCard but showing learner name
+                tutor={session.learner?.name || t('student')} // Reusing SessionCard but showing learner name
               />
             ))
           )}
@@ -200,6 +204,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'relative',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   notifBadgeCount: {
     position: 'absolute',

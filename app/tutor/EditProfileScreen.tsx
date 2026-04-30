@@ -12,10 +12,13 @@ import { useTheme } from '../../context/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 
+import { useLanguage } from '../../context/LanguageContext';
+
 export default function EditProfileScreen() {
   const router = useRouter();
   const { profileData, updateProfile } = useProfile();
   const { colors, isDark } = useTheme();
+  const { t } = useLanguage();
 
   const user = useQuery(api.users.getUserByEmail, profileData?.email ? { email: profileData.email } : "skip");
   const updateUser = useMutation(api.users.updateUser);
@@ -40,12 +43,11 @@ export default function EditProfileScreen() {
   }, [user]);
 
   const pickImage = async () => {
-    // No permissions request is necessary for launching the image library
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.5, // Reduced quality for smaller payload (base64)
+      quality: 0.5,
       base64: true,
     });
 
@@ -57,7 +59,7 @@ export default function EditProfileScreen() {
 
   const handleSave = async () => {
     if (!user || !name.trim()) {
-      Alert.alert("Error", "Nama tidak boleh kosong.");
+      Alert.alert(t('error'), t('error_name_empty'));
       return;
     }
     setIsSaving(true);
@@ -76,11 +78,11 @@ export default function EditProfileScreen() {
         name: name.trim(),
         profileImage: profileImage || undefined
       });
-      Alert.alert("Berhasil", "Profil berhasil diperbarui!");
+      Alert.alert(t('berhasil'), t('profile_updated_success'));
       router.push('/tutor/TutorProfileScreen' as any);
     } catch (e) {
       console.error(e);
-      Alert.alert("Error", "Gagal menyimpan profil.");
+      Alert.alert(t('error'), t('profile_update_error'));
     } finally {
       setIsSaving(false);
     }
@@ -88,8 +90,8 @@ export default function EditProfileScreen() {
 
   if (!user) {
     return (
-      <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#4F46E5" />
+      <SafeAreaView style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </SafeAreaView>
     );
   }
@@ -100,14 +102,13 @@ export default function EditProfileScreen() {
         <TouchableOpacity onPress={() => router.push('/tutor/TutorProfileScreen' as any)} style={styles.backBtn}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Edit Profil</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('edit_profile')}</Text>
         <View style={{ width: 24 }} />
       </View>
 
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           
-          {/* Avatar Section */}
           <View style={styles.avatarSection}>
             <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
               {profileImage ? (
@@ -120,53 +121,51 @@ export default function EditProfileScreen() {
               style={[styles.changePhotoBtn, { backgroundColor: colors.primaryLight }]}
               onPress={pickImage}
             >
-              <Text style={[styles.changePhotoText, { color: colors.primary }]}>Ganti Foto</Text>
+              <Text style={[styles.changePhotoText, { color: colors.primary }]}>{t('change_photo')}</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Form Fields */}
           <View style={[styles.formCard, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
             <View style={styles.field}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Nama Lengkap</Text>
-              <TextInput style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.inputBorder }]} value={name} onChangeText={setName} placeholder="Masukkan nama" placeholderTextColor={colors.textMuted} />
+              <Text style={[styles.label, { color: colors.textSecondary }]}>{t('fullname_label')}</Text>
+              <TextInput style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.inputBorder }]} value={name} onChangeText={setName} placeholder={t('name_placeholder')} placeholderTextColor={colors.textMuted} />
             </View>
 
             <View style={styles.field}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Email</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>{t('email_label')}</Text>
               <TextInput style={[styles.input, styles.inputDisabled, { backgroundColor: colors.border, color: colors.textMuted, borderColor: colors.inputBorder }]} value={user.email} editable={false} />
             </View>
 
             <View style={styles.field}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Nomor Telepon</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>{t('phone_number_label')}</Text>
               <TextInput style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.inputBorder }]} value={phone} onChangeText={setPhone} placeholder="08xxxxxxxxxx" keyboardType="phone-pad" placeholderTextColor={colors.textMuted} />
             </View>
 
             <View style={styles.field}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Universitas</Text>
-              <TextInput style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.inputBorder }]} value={university} onChangeText={setUniversity} placeholder="Nama universitas" placeholderTextColor={colors.textMuted} />
+              <Text style={[styles.label, { color: colors.textSecondary }]}>{t('university_label')}</Text>
+              <TextInput style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.inputBorder }]} value={university} onChangeText={setUniversity} placeholder={t('university_label')} placeholderTextColor={colors.textMuted} />
             </View>
 
             <View style={styles.field}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Jurusan</Text>
-              <TextInput style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.inputBorder }]} value={major} onChangeText={setMajor} placeholder="Jurusan Anda" placeholderTextColor={colors.textMuted} />
+              <Text style={[styles.label, { color: colors.textSecondary }]}>{t('major_label')}</Text>
+              <TextInput style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.inputBorder }]} value={major} onChangeText={setMajor} placeholder={t('major_label')} placeholderTextColor={colors.textMuted} />
             </View>
 
             <View style={styles.field}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Alamat</Text>
-              <TextInput style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.inputBorder }]} value={address} onChangeText={setAddress} placeholder="Alamat lengkap" multiline placeholderTextColor={colors.textMuted} />
+              <Text style={[styles.label, { color: colors.textSecondary }]}>{t('address_label')}</Text>
+              <TextInput style={[styles.input, { backgroundColor: colors.inputBg, color: colors.text, borderColor: colors.inputBorder }]} value={address} onChangeText={setAddress} placeholder={t('address_label')} multiline placeholderTextColor={colors.textMuted} />
             </View>
           </View>
 
-          {/* Save Button */}
           <TouchableOpacity 
-            style={[styles.saveBtn, isSaving && { opacity: 0.7 }]} 
+            style={[styles.saveBtn, { backgroundColor: colors.primary }, isSaving && { opacity: 0.7 }]} 
             onPress={handleSave} 
             disabled={isSaving}
           >
             {isSaving ? (
               <ActivityIndicator size="small" color="#FFF" />
             ) : (
-              <Text style={styles.saveBtnText}>Simpan Perubahan</Text>
+              <Text style={styles.saveBtnText}>{t('save_changes_btn')}</Text>
             )}
           </TouchableOpacity>
 

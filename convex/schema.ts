@@ -5,6 +5,7 @@ export default defineSchema({
   users: defineTable({
     name: v.string(),
     email: v.string(),
+    password: v.optional(v.string()),
     role: v.optional(v.union(v.literal("tutor"), v.literal("learner"))),
     university: v.optional(v.string()),
     major: v.optional(v.string()),
@@ -12,6 +13,7 @@ export default defineSchema({
     address: v.optional(v.string()),
     year: v.optional(v.string()),
     profileImage: v.optional(v.string()),
+    language: v.optional(v.union(v.literal("id"), v.literal("en"), v.literal("zh"))),
     preferences: v.optional(
       v.object({
         learningStyle: v.optional(v.string()),

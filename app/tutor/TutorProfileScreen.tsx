@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   View,
   Text,
@@ -9,30 +9,37 @@ import {
   ActivityIndicator,
   Platform,
   Alert,
-  Image
+  Image,
+  Modal,
+  Dimensions
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useProfile } from '../../context/ProfileContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage, LanguageType } from '../../context/LanguageContext';
 import { Ionicons } from '@expo/vector-icons';
+
+const { width } = Dimensions.get('window');
 
 export default function TutorProfileScreen() {
   const router = useRouter();
-  const { profileData, updateProfile, clearProfile } = useProfile();
+  const { profileData, clearProfile } = useProfile();
   const { colors, isDark } = useTheme();
+  const { language, setLanguage, t } = useLanguage();
+  const [languageModalVisible, setLanguageModalVisible] = useState(false);
 
   const user = useQuery(api.users.getUserByEmail, profileData?.email ? { email: profileData.email } : "skip");
 
   const handleLogout = () => {
     Alert.alert(
-      "Keluar",
-      "Apakah Anda yakin ingin keluar?",
+      t('logout_confirm_title'),
+      t('logout_confirm_desc'),
       [
-        { text: "Batal", style: "cancel" },
+        { text: t('cancel'), style: "cancel" },
         { 
-          text: "Keluar", 
+          text: t('logout'), 
           style: "destructive",
           onPress: () => {
             clearProfile();
@@ -66,7 +73,7 @@ export default function TutorProfileScreen() {
               )}
             </View>
             <View style={[styles.roleBadge, { backgroundColor: colors.success }]}>
-              <Text style={styles.roleBadgeText}>TUTOR</Text>
+              <Text style={styles.roleBadgeText}>{t('role_tutor').toUpperCase()}</Text>
             </View>
           </View>
           <Text style={[styles.profileName, { color: colors.text }]}>{profileData?.name || 'Tutor'}</Text>
@@ -77,17 +84,17 @@ export default function TutorProfileScreen() {
         <View style={[styles.statsRow, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
           <View style={styles.statItem}>
             <Text style={[styles.statValue, { color: colors.primary }]}>0</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Sesi</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('tutor_stats_sessions')}</Text>
           </View>
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
           <View style={styles.statItem}>
             <Text style={[styles.statValue, { color: colors.primary }]}>0</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Siswa</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('tutor_stats_students')}</Text>
           </View>
           <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
           <View style={styles.statItem}>
             <Text style={[styles.statValue, { color: colors.primary }]}>5.0</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Rating</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('tutor_stats_rating')}</Text>
           </View>
         </View>
 
@@ -98,8 +105,8 @@ export default function TutorProfileScreen() {
               <Ionicons name="person-outline" size={20} color={colors.primary} />
             </View>
             <View style={styles.menuTextCol}>
-              <Text style={[styles.menuText, { color: colors.text }]}>Edit Profil</Text>
-              <Text style={[styles.menuSubText, { color: colors.textMuted }]}>Nama, Foto, Bio & Keahlian</Text>
+              <Text style={[styles.menuText, { color: colors.text }]}>{t('edit_profile')}</Text>
+              <Text style={[styles.menuSubText, { color: colors.textMuted }]}>{t('edit_profile_desc')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </TouchableOpacity>
@@ -109,8 +116,8 @@ export default function TutorProfileScreen() {
               <Ionicons name="book-outline" size={20} color={colors.success} />
             </View>
             <View style={styles.menuTextCol}>
-              <Text style={[styles.menuText, { color: colors.text }]}>Subjek Saya</Text>
-              <Text style={[styles.menuSubText, { color: colors.textMuted }]}>Kelola mata pelajaran yang diajar</Text>
+              <Text style={[styles.menuText, { color: colors.text }]}>{t('my_subjects')}</Text>
+              <Text style={[styles.menuSubText, { color: colors.textMuted }]}>{t('my_subjects_desc')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </TouchableOpacity>
@@ -120,8 +127,8 @@ export default function TutorProfileScreen() {
               <Ionicons name="time-outline" size={20} color="#EA580C" />
             </View>
             <View style={styles.menuTextCol}>
-              <Text style={[styles.menuText, { color: colors.text }]}>Ketersediaan</Text>
-              <Text style={[styles.menuSubText, { color: colors.textMuted }]}>Atur jadwal jam mengajar Anda</Text>
+              <Text style={[styles.menuText, { color: colors.text }]}>{t('availability')}</Text>
+              <Text style={[styles.menuSubText, { color: colors.textMuted }]}>{t('availability_desc')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </TouchableOpacity>
@@ -131,40 +138,80 @@ export default function TutorProfileScreen() {
               <Ionicons name="settings-outline" size={20} color={colors.textSecondary} />
             </View>
             <View style={styles.menuTextCol}>
-              <Text style={[styles.menuText, { color: colors.text }]}>Pengaturan</Text>
-              <Text style={[styles.menuSubText, { color: colors.textMuted }]}>Notifikasi, Keamanan & Akun</Text>
+              <Text style={[styles.menuText, { color: colors.text }]}>{t('settings')}</Text>
+              <Text style={[styles.menuSubText, { color: colors.textMuted }]}>{t('settings_desc')}</Text>
             </View>
             <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
           </TouchableOpacity>
         </View>
 
-        {/* About EduPartner Section (Matches Learner Style) */}
+        {/* Preferences Section */}
         <View style={styles.aboutSectionWrapper}>
-           <Text style={[styles.sectionTitleLabel, { color: colors.textSecondary }]}>Lainnya</Text>
+           <Text style={[styles.sectionTitleLabel, { color: colors.textSecondary }]}>{t('preferences')}</Text>
            <View style={[styles.aboutCardGroup, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <TouchableOpacity 
                 style={styles.aboutMenuItem}
-                onPress={() => router.push('/about' as any)}
+                onPress={() => setLanguageModalVisible(true)}
               >
                  <View style={[styles.aboutIconBg, { backgroundColor: colors.background }]}>
-                    <Ionicons name="information-circle-outline" size={22} color={colors.primary} />
+                    <Ionicons name="language" size={22} color={colors.primary} />
                  </View>
                  <View style={styles.aboutTextCol}>
-                    <Text style={[styles.aboutItemTitle, { color: colors.text }]}>Tentang EduPartner AI</Text>
-                    <Text style={[styles.aboutItemSub, { color: colors.textMuted }]}>Versi 2.0.4 Premium</Text>
+                    <Text style={[styles.aboutItemTitle, { color: colors.text }]}>{t('language')}</Text>
+                    <Text style={[styles.aboutItemSub, { color: colors.textMuted }]}>
+                       {language === 'id' ? 'Bahasa Indonesia' : 'English'}
+                    </Text>
                  </View>
                  <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
               </TouchableOpacity>
            </View>
         </View>
 
+
+
         {/* Logout Button */}
         <TouchableOpacity style={[styles.logoutBtn, { backgroundColor: colors.dangerLight }]} onPress={handleLogout}>
           <Ionicons name="log-out-outline" size={20} color={colors.danger} />
-          <Text style={[styles.logoutText, { color: colors.danger }]}>Keluar Akun</Text>
+          <Text style={[styles.logoutText, { color: colors.danger }]}>{t('logout')}</Text>
         </TouchableOpacity>
 
       </ScrollView>
+
+      {/* Language Selection Modal */}
+      <Modal visible={languageModalVisible} animationType="fade" transparent>
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setLanguageModalVisible(false)}
+        >
+          <View style={[styles.languageModal, { backgroundColor: colors.card }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>{t('language')}</Text>
+            
+            {[
+              { id: 'id', name: 'Bahasa Indonesia', flag: '🇮🇩' },
+              { id: 'en', name: 'English', flag: '🇺🇸' },
+            ].map((lang) => (
+              <TouchableOpacity
+                key={lang.id}
+                style={[
+                  styles.languageOption,
+                  language === lang.id && { backgroundColor: colors.primary + '10', borderColor: colors.primary }
+                ]}
+                onPress={async () => {
+                  setLanguage(lang.id as LanguageType);
+                  setLanguageModalVisible(false);
+                }}
+              >
+                <Text style={styles.languageFlag}>{lang.flag}</Text>
+                <Text style={[styles.languageName, { color: colors.text }]}>{lang.name}</Text>
+                {language === lang.id && (
+                  <Ionicons name="checkmark-circle" size={22} color={colors.primary} />
+                )}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -364,5 +411,45 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '800',
     color: '#EF4444',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  languageModal: {
+    width: width * 0.8,
+    padding: 24,
+    borderRadius: 28,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.1,
+    shadowRadius: 20,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '900',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  languageOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'transparent',
+    marginBottom: 8,
+    gap: 12,
+  },
+  languageFlag: {
+    fontSize: 24,
+  },
+  languageName: {
+    flex: 1,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

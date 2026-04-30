@@ -13,30 +13,30 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useTheme } from '../context/ThemeContext';
-
+import { useLanguage } from '../context/LanguageContext';
 const { width } = Dimensions.get('window');
 
 export default function AboutScreen() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
-
+  const { t, language } = useLanguage();
   const features = [
     {
       icon: 'scan-outline',
-      title: 'AI Scanner',
-      desc: 'Pahami materi sulit hanya dengan memotret soal atau catatan Anda.',
+      title: t('ai_scanner_title'),
+      desc: t('ai_scanner_desc'),
       color: '#3B82F6'
     },
     {
       icon: 'calendar-outline',
-      title: 'Study Planner',
-      desc: 'Jadwal belajar otomatis yang disesuaikan dengan target dan waktu Anda.',
+      title: t('study_planner_title'),
+      desc: t('study_planner_desc'),
       color: '#F59E0B'
     },
     {
       icon: 'people-outline',
-      title: 'Expert Tutors',
-      desc: 'Terhubung dengan pengajar ahli yang direkomendasikan khusus oleh AI.',
+      title: t('expert_tutors_title'),
+      desc: t('expert_tutors_desc'),
       color: '#10B981'
     }
   ];
@@ -53,7 +53,7 @@ export default function AboutScreen() {
         <TouchableOpacity onPress={() => router.back()} style={[styles.backButton, { backgroundColor: colors.card }]}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Tentang Kami</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('about_us')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -63,18 +63,17 @@ export default function AboutScreen() {
              <Ionicons name="sparkles" size={60} color={colors.primary} />
           </View>
           <Text style={[styles.appName, { color: colors.text }]}>EduPartner AI</Text>
-          <Text style={[styles.versionText, { color: colors.textMuted }]}>Versi 2.0.4 Premium</Text>
+          <Text style={[styles.versionText, { color: colors.textMuted }]}>{language === 'id' ? 'Versi' : 'Version'} 2.0.4 Premium</Text>
         </View>
 
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Visi Kami</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('vision_title')}</Text>
           <Text style={[styles.description, { color: colors.textSecondary }]}>
-            EduPartner AI hadir untuk mendemokrasikan pendidikan berkualitas melalui kekuatan Artificial Intelligence. 
-            Kami percaya bahwa setiap pelajar berhak mendapatkan asisten pribadi yang memahami cara belajar mereka yang unik.
+            {t('vision_desc')}
           </Text>
         </View>
 
-        <Text style={[styles.subHeader, { color: colors.text }]}>Fitur Unggulan</Text>
+        <Text style={[styles.subHeader, { color: colors.text }]}>{t('key_features')}</Text>
         
         {features.map((feature, index) => (
           <View key={index} style={[styles.featureRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -90,10 +89,10 @@ export default function AboutScreen() {
 
         <View style={styles.footer}>
           <Text style={[styles.footerText, { color: colors.textMuted }]}>
-            Dikembangkan dengan ❤️ untuk pendidikan Indonesia.
+            {t('developed_with')}
           </Text>
           <Text style={[styles.copyright, { color: colors.textMuted }]}>
-            © 2026 EduPartner AI. All Rights Reserved.
+            © 2026 EduPartner AI. {t('all_rights_reserved')}
           </Text>
         </View>
       </ScrollView>

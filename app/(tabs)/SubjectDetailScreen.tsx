@@ -11,87 +11,78 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 // import { BottomTabBar } from '../../components/BottomTabBar'; <--- Removed
 
 // Full subject data with details
-const SUBJECT_DATA: Record<string, {
-  name: string;
-  icon: string;
-  color: string;
-  iconColor: string;
-  description: string;
-  topics: string[];
-  tutorCount: number;
-  avgRating: number;
-  difficulty: string;
-}> = {
+const getSubjectData = (t: any) => ({
   '1': {
-    name: 'Matematika',
+    name: t('subject_matematika'),
     icon: 'calculator-outline',
     color: '#EBE2FF',
     iconColor: '#7C3AED',
-    description: 'Pelajari konsep matematika dari dasar hingga lanjutan: Aljabar, Kalkulus, Statistika, Geometri, dan lainnya.',
-    topics: ['Aljabar Linear', 'Kalkulus I & II', 'Statistika & Probabilitas', 'Geometri Analitik', 'Persamaan Diferensial'],
+    description: t('math_desc'),
+    topics: [t('topic_linear_algebra'), t('topic_calculus'), t('topic_statistics'), t('topic_geometry'), t('topic_differential')],
     tutorCount: 24,
     avgRating: 4.8,
-    difficulty: 'Menengah - Lanjutan',
+    difficulty: t('opt_intermediate'),
   },
   '2': {
-    name: 'Koding',
+    name: t('subject_pemrograman'),
     icon: 'code-slash-outline',
     color: '#FCE7F3',
     iconColor: '#DB2777',
-    description: 'Kuasai pemrograman dari nol: Python, JavaScript, Java, dan framework modern untuk pengembangan web & mobile.',
-    topics: ['Python Dasar & Lanjutan', 'JavaScript & React', 'Struktur Data & Algoritma', 'Pengembangan Mobile', 'Machine Learning'],
+    description: t('coding_desc'),
+    topics: [t('topic_python'), t('topic_javascript'), t('topic_data_structures'), t('topic_mobile_dev'), t('topic_machine_learning')],
     tutorCount: 31,
     avgRating: 4.9,
-    difficulty: 'Pemula - Lanjutan',
+    difficulty: t('opt_beginner'),
   },
   '3': {
-    name: 'Bahasa',
+    name: t('subject_bahasa_inggris'),
     icon: 'globe-outline',
     color: '#FCE7F3',
     iconColor: '#E11D48',
-    description: 'Tingkatkan kemampuan bahasa asing: Inggris, Jepang, Mandarin, Korea, dan persiapan TOEFL/IELTS.',
-    topics: ['Bahasa Inggris Akademik', 'Persiapan TOEFL/IELTS', 'Bahasa Jepang (JLPT)', 'Bahasa Mandarin', 'Bahasa Korea (TOPIK)'],
+    description: t('language_desc_short'),
+    topics: [t('topic_academic_english'), t('topic_toefl'), t('topic_spanish'), t('topic_mandarin'), t('topic_korean')],
     tutorCount: 18,
     avgRating: 4.7,
-    difficulty: 'Pemula - Lanjutan',
+    difficulty: t('opt_beginner'),
   },
   '4': {
-    name: 'Biologi',
+    name: t('subject_biologi'),
     icon: 'flask-outline',
     color: '#EBE2FF',
     iconColor: '#4F46E5',
-    description: 'Eksplorasi ilmu kehidupan: Biologi Sel, Genetika, Ekologi, Anatomi, dan Bioteknologi modern.',
-    topics: ['Biologi Sel & Molekuler', 'Genetika & Evolusi', 'Anatomi & Fisiologi', 'Ekologi & Lingkungan', 'Bioteknologi (CRISPR)'],
+    description: t('biology_desc'),
+    topics: [t('topic_cell_biology'), t('topic_genetics'), t('topic_anatomy'), t('topic_ecology'), t('topic_biotechnology')],
     tutorCount: 15,
     avgRating: 4.6,
-    difficulty: 'Menengah',
+    difficulty: t('opt_intermediate'),
   },
   '5': {
-    name: 'Desain',
+    name: t('subject_desain_grafis'),
     icon: 'color-palette-outline',
     color: '#F3E8FF',
     iconColor: '#9333EA',
-    description: 'Pelajari prinsip desain visual, UI/UX, tipografi, dan tools industri seperti Figma & Adobe Suite.',
-    topics: ['UI/UX Design', 'Prinsip Desain Visual', 'Figma & Prototyping', 'Tipografi & Warna', 'Desain Grafis (Adobe)'],
+    description: t('design_desc'),
+    topics: [t('topic_ui_ux'), t('topic_visual_principles'), t('topic_figma'), t('topic_typography'), t('topic_graphic_design')],
     tutorCount: 12,
     avgRating: 4.8,
-    difficulty: 'Pemula - Menengah',
+    difficulty: t('opt_beginner'),
   },
   '6': {
-    name: 'Sejarah',
+    name: t('subject_sejarah'),
     icon: 'time-outline',
     color: '#FEE2E2',
     iconColor: '#E11D48',
-    description: 'Jelajahi peradaban dunia: Sejarah Indonesia, Eropa, Asia, dan peristiwa-peristiwa penting yang membentuk dunia modern.',
-    topics: ['Sejarah Indonesia', 'Peradaban Kuno', 'Sejarah Eropa Modern', 'Perang Dunia I & II', 'Sejarah Asia Kontemporer'],
+    description: t('history_desc'),
+    topics: [t('topic_indo_history'), t('topic_ancient_civ'), t('topic_modern_europe'), t('topic_world_war'), t('topic_contemporary_asia')],
     tutorCount: 9,
     avgRating: 4.5,
-    difficulty: 'Pemula - Menengah',
+    difficulty: t('opt_beginner'),
   },
-};
+});
 
 // Tutors mapped per subject
 const SUBJECT_TUTORS: Record<string, { id: string; name: string; specialty: string; rating: number; reviews: number; available: boolean }[]> = {
@@ -126,14 +117,16 @@ export default function SubjectDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors, isDark } = useTheme();
+  const { t, language } = useLanguage();
   
+  const SUBJECT_DATA = getSubjectData(t) as any;
   const subject = SUBJECT_DATA[id || '1'];
   const tutors = SUBJECT_TUTORS[id || '1'] || [];
   
   if (!subject) {
     return (
       <SafeAreaView style={[styles.safeArea, { backgroundColor: colors.background }]}>
-        <Text style={{ padding: 40, textAlign: 'center', color: colors.text }}>Mata kuliah tidak ditemukan.</Text>
+        <Text style={{ padding: 40, textAlign: 'center', color: colors.text }}>{t('subject_not_found')}</Text>
       </SafeAreaView>
     );
   }
@@ -146,7 +139,7 @@ export default function SubjectDetailScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Detail Mata Kuliah</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>{t('subject_detail')}</Text>
         <View style={{ width: 32 }} />
       </View>
 
@@ -172,28 +165,28 @@ export default function SubjectDetailScreen() {
               <Ionicons name="people" size={20} color={colors.primary} />
             </View>
             <Text style={[styles.statValue, { color: colors.text }]}>{subject.tutorCount}</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Tutor Tersedia</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('available_tutors')}</Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={[styles.statIconBox, { backgroundColor: '#FEF3C7' }]}>
               <Ionicons name="star" size={20} color="#F59E0B" />
             </View>
             <Text style={[styles.statValue, { color: colors.text }]}>{subject.avgRating}</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Rating Rata-Rata</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('avg_rating')}</Text>
           </View>
           <View style={[styles.statCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <View style={[styles.statIconBox, { backgroundColor: '#F3E8FF' }]}>
               <Ionicons name="book" size={20} color="#9333EA" />
             </View>
             <Text style={[styles.statValue, { color: colors.text }]}>{subject.topics.length}</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Topik</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('tab_sessions')}</Text>
           </View>
         </View>
 
         {/* Topics List */}
         <View style={[styles.sectionBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Topik yang Dipelajari</Text>
-          {subject.topics.map((topic, idx) => (
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('topics_learned')}</Text>
+          {subject.topics.map((topic: string, idx: number) => (
             <View key={idx} style={[styles.topicRow, { borderBottomColor: colors.border }, idx === subject.topics.length - 1 && { borderBottomWidth: 0 }]}>
               <View style={[styles.topicBullet, { backgroundColor: subject.iconColor }]} />
               <Text style={[styles.topicText, { color: colors.text }]}>{topic}</Text>
@@ -204,9 +197,9 @@ export default function SubjectDetailScreen() {
         {/* Tutor List */}
         <View style={[styles.sectionBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.tutorSectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Tutor Tersedia</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('available_tutors')}</Text>
             <View style={[styles.tutorCountPill, { backgroundColor: colors.primaryLight }]}>
-              <Text style={[styles.tutorCountText, { color: colors.primary }]}>{tutors.length} orang</Text>
+              <Text style={[styles.tutorCountText, { color: colors.primary }]}>{t('tutor_count', { count: tutors.length })}</Text>
             </View>
           </View>
           {tutors.map((tutor, idx) => (
@@ -226,12 +219,12 @@ export default function SubjectDetailScreen() {
                 <View style={styles.tutorMetaRow}>
                   <Ionicons name="star" size={12} color="#F59E0B" />
                   <Text style={[styles.tutorRating, { color: colors.text }]}>{tutor.rating}</Text>
-                  <Text style={[styles.tutorReviews, { color: colors.textSecondary }]}>({tutor.reviews} ulasan)</Text>
+                  <Text style={[styles.tutorReviews, { color: colors.textSecondary }]}>{t('reviews_count', { count: tutor.reviews })}</Text>
                 </View>
               </View>
               <View style={styles.tutorStatusCol}>
                 <Text style={[styles.tutorStatus, !tutor.available && styles.tutorStatusBusy]}>
-                  {tutor.available ? 'Tersedia' : 'Penuh'}
+                  {tutor.available ? t('status_available') : t('status_full')}
                 </Text>
                 <Ionicons name="chevron-forward" size={16} color={colors.border} />
               </View>
@@ -246,7 +239,7 @@ export default function SubjectDetailScreen() {
             onPress={() => router.push('/TutorListScreen' as any)}
           >
             <Ionicons name="search" size={18} color="#FFF" />
-            <Text style={styles.primaryBtnText}>Cari Tutor {subject.name}</Text>
+            <Text style={styles.primaryBtnText}>{t('find_tutor_name', { name: subject.name })}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
@@ -254,7 +247,7 @@ export default function SubjectDetailScreen() {
             onPress={() => router.push('/SubjectScreen' as any)}
           >
             <Ionicons name="book-outline" size={18} color={colors.primary} />
-            <Text style={[styles.secondaryBtnText, { color: colors.primary }]}>Mulai Belajar Mandiri</Text>
+            <Text style={[styles.secondaryBtnText, { color: colors.primary }]}>{t('start_self_study')}</Text>
           </TouchableOpacity>
         </View>
 

@@ -17,14 +17,15 @@ import { useTheme } from '../../context/ThemeContext';
 import { useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useProfile } from '../../context/ProfileContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 const { width } = Dimensions.get('window');
 
-const BADGES = [
-  { id: '1', title: 'Bangun Pagi', desc: '4 sesi sebelum jam 8 Pagi', bg: '#FDE047', icon: 'flash', iconColor: '#A16207', earned: true },
-  { id: '2', title: 'Pemikir Dalam', desc: 'Sesi fokus 2 jam+', bg: '#93C5FD', icon: 'medal', iconColor: '#1E3A8A', earned: true },
-  { id: '3', title: 'Penguasa Api', desc: '7 hari beruntun', bg: '#F3F4F6', icon: 'flame', iconColor: '#D1D5DB', earned: false },
-  { id: '4', title: 'Mentor', desc: 'Bantu 10 teman', bg: '#F3F4F6', icon: 'people', iconColor: '#D1D5DB', earned: false },
+const getBadges = (t: any) => [
+  { id: '1', title: t('badge_morning_title'), desc: t('badge_morning_desc'), bg: '#FDE047', icon: 'flash', iconColor: '#A16207', earned: true },
+  { id: '2', title: t('badge_thinker_title'), desc: t('badge_thinker_desc'), bg: '#93C5FD', icon: 'medal', iconColor: '#1E3A8A', earned: true },
+  { id: '3', title: t('badge_fire_title'), desc: t('badge_fire_desc'), bg: '#F3F4F6', icon: 'flame', iconColor: '#D1D5DB', earned: false },
+  { id: '4', title: t('badge_mentor_title'), desc: t('badge_mentor_desc'), bg: '#F3F4F6', icon: 'people', iconColor: '#D1D5DB', earned: false },
 ];
 
 
@@ -33,6 +34,7 @@ export default function ProgressScreen() {
   const router = useRouter();
   const { colors } = useTheme();
   const { profileData } = useProfile();
+  const { t, language } = useLanguage();
 
   // Convex Integration
   const currentUser = useQuery(api.users.getUserByEmail, { email: profileData.email });
@@ -43,11 +45,11 @@ export default function ProgressScreen() {
     currentUser ? { userId: currentUser._id } : "skip"
   );
 
-  const [activeTab, setActiveTab] = React.useState('Minggu');
+  const [activeTab, setActiveTab] = React.useState(t('week'));
 
   // Hitung data chart berdasarkan sesi riil
   const getWeeklyChartData = () => {
-    const days = ['MIN', 'SEN', 'SEL', 'RAB', 'KAM', 'JUM', 'SAB'];
+    const days = [t('day_min'), t('day_sen'), t('day_sel'), t('day_rab'), t('day_kam'), t('day_jum'), t('day_sab')];
     const counts = [0, 0, 0, 0, 0, 0, 0];
     
     if (sessions) {
@@ -61,7 +63,7 @@ export default function ProgressScreen() {
     const today = new Date().getDay();
 
     // Reorder to start from SEN
-    const orderedDays = ['SEN', 'SEL', 'RAB', 'KAM', 'JUM', 'SAB', 'MIN'];
+    const orderedDays = [t('day_sen'), t('day_sel'), t('day_rab'), t('day_kam'), t('day_jum'), t('day_sab'), t('day_min')];
     const orderedIndices = [1, 2, 3, 4, 5, 6, 0];
 
     return orderedIndices.map((dayIdx, i) => ({
@@ -73,6 +75,7 @@ export default function ProgressScreen() {
   };
 
   const chartData = getWeeklyChartData();
+  const BADGES = getBadges(t);
   const earnedBadges = BADGES.filter(b => b.earned);
 
   return (
@@ -98,18 +101,18 @@ export default function ProgressScreen() {
         
         {/* Title Intro */}
         <View style={styles.titleSection}>
-          <Text style={[styles.mainTitle, { color: colors.text }]}>Perjalanan Belajarku</Text>
+          <Text style={[styles.mainTitle, { color: colors.text }]}>{t('learning_journey')}</Text>
           <Text style={[styles.mainDesc, { color: colors.textSecondary }]}>
             {learningPulse && learningPulse.completed > 0 
-              ? "Kamu berada di 5% pelajar teratas minggu ini. Pertahankan momentumnya!" 
-              : "Siap memulai petualangan belajarmu? Selesaikan sesi pertama untuk melihat statistik di sini!"}
+              ? t('top_student_momentum')
+              : t('start_adventure')}
           </Text>
         </View>
 
         {/* Collaborative Mode Banner */}
         <TouchableOpacity 
           style={styles.collabBanner}
-          onPress={() => Alert.alert("Mode Kolaboratif", "Fitur ini memungkinkan kamu belajar bersama teman. Segera hadir!")}
+          onPress={() => Alert.alert(t('collaborative_mode'), t('collaborative_mode_desc'))}
         >
            <View style={styles.avatarsOverlapBox}>
               <View style={[styles.overlapAvatar, { zIndex: 3, backgroundColor: colors.primary }]}>
@@ -120,20 +123,20 @@ export default function ProgressScreen() {
               </View>
            </View>
            <View style={styles.collabTextContent}>
-              <Text style={styles.collabTitle}>Mode Kolaboratif</Text>
-              <Text style={styles.collabSub}>Undang teman untuk belajar bersama</Text>
+               <Text style={styles.collabTitle}>{t('collaborative_mode')}</Text>
+                             <Text style={styles.collabSub}>{t('invite_friends')}</Text>
            </View>
            <Ionicons name="add-circle" size={24} color={colors.primary} />
         </TouchableOpacity>
 
         {/* Main Mastery Card */}
         <View style={[styles.masteryCard, { backgroundColor: colors.primary }]}>
-           <Text style={styles.masterySuperTitle}>DENYUT BELAJAR</Text>
-           <Text style={styles.masteryTitle}>Sesi Terdaftar</Text>
+           <Text style={styles.masterySuperTitle}>{t('learning_pulse').toUpperCase()}</Text>
+           <Text style={styles.masteryTitle}>{t('registered_sessions')}</Text>
            
            <View style={styles.masteryScoreRow}>
               <Text style={styles.masteryScoreValue}>{learningPulse?.completed || 0}</Text>
-              <Text style={styles.masteryTargetText}>Target: {learningPulse?.total || 5} Sesi</Text>
+              <Text style={styles.masteryTargetText}>{t('weekly_target')}: {learningPulse?.total || 5}</Text>
            </View>
            
            <View style={styles.progressBarBg}>
@@ -150,24 +153,24 @@ export default function ProgressScreen() {
               <View style={[styles.pointsIconBox, { backgroundColor: colors.primary }]}>
                  <Ionicons name="ribbon" size={20} color="#FFFFFF" />
               </View>
-              <View style={styles.rankBadge}>
-                 <Text style={styles.rankBadgeText}>Peringkat #4</Text>
-              </View>
+               <View style={styles.rankBadge}>
+                  <Text style={styles.rankBadgeText}>{t('rank')} #4</Text>
+               </View>
            </View>
            <Text style={[styles.pointsValue, { color: colors.text }]}>{currentUser?.stats?.points || 0}</Text>
-           <Text style={[styles.pointsSubText, { color: colors.textSecondary }]}>Poin Edu Terkumpul</Text>
+                       <Text style={[styles.pointsSubText, { color: colors.textSecondary }]}>{t('points_collected')}</Text>
            
            <TouchableOpacity 
              style={[styles.pointsActionBtn, { backgroundColor: colors.primary }]}
-             onPress={() => Alert.alert("Tukarkan Hadiah", "Kumpulkan lebih banyak poin untuk menukarkan dengan voucher belajar!")}
+             onPress={() => Alert.alert(t('redeem_gift'), t('redeem_gift_desc'))}
            >
-              <Text style={styles.pointsActionBtnText}>Tukarkan Hadiah</Text>
+                             <Text style={styles.pointsActionBtnText}>{t('redeem_gift')}</Text>
            </TouchableOpacity>
         </View>
 
         {/* Subject Progress List */}
         <View style={styles.sectionContainer}>
-           <Text style={[styles.sectionTitle, { color: colors.text }]}>Status Sesi Belajar</Text>
+           <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('session_status')}</Text>
            
            {!sessions ? (
              <ActivityIndicator size="small" color="#4F46E5" />
@@ -187,12 +190,12 @@ export default function ProgressScreen() {
                            <Ionicons name="book" size={16} color="#4F46E5" />
                         </View>
                         <View>
-                          <Text style={[styles.subTextTitle, { color: colors.text }]}>{session.subject}</Text>
-                          <Text style={[styles.subTextSubtitle, { color: colors.textSecondary, fontSize: 10 }]}>Tutor: {session.tutor?.name}</Text>
+                          <Text style={[styles.subTextTitle, { color: colors.text }]}>{t(`subject_${session.subject.toLowerCase().replace(/\s+/g, '_')}`)}</Text>
+                          <Text style={[styles.subTextSubtitle, { color: colors.textSecondary, fontSize: 10 }]}>{t('role_tutor')}: {session.tutor?.name}</Text>
                         </View>
                      </View>
                      <Text style={[styles.subTextScore, { color: session.status === 'booked' ? '#4F46E5' : '#10B981' }]}>
-                       {session.status.toUpperCase()}
+                       {t(`status_${session.status}`).toUpperCase()}
                      </Text>
 
                      <View style={[styles.subProgressBarBg, { backgroundColor: colors.border }]}>
@@ -200,9 +203,9 @@ export default function ProgressScreen() {
                      </View>
                   </TouchableOpacity>
                 ))}
-                {sessions.length === 0 && (
-                  <Text style={{ textAlign: 'center', color: colors.textSecondary }}>Belum ada sesi yang dipesan.</Text>
-                )}
+                 {sessions.length === 0 && (
+                   <Text style={{ textAlign: 'center', color: colors.textSecondary }}>{t('no_sessions_booked')}</Text>
+                 )}
              </View>
            )}
         </View>
@@ -210,8 +213,8 @@ export default function ProgressScreen() {
         {/* Badges Grid */}
         <View style={styles.sectionContainer}>
            <View style={styles.sectionHeaderRow}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Lencana Terbaru</Text>
-              <TouchableOpacity><Text style={[styles.linkText, { color: colors.primary }]}>Lihat Semua</Text></TouchableOpacity>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('latest_badges')}</Text>
+              <TouchableOpacity><Text style={[styles.linkText, { color: colors.primary }]}>{t('see_all')}</Text></TouchableOpacity>
            </View>
 
            <View style={styles.badgesGrid}>
@@ -227,7 +230,7 @@ export default function ProgressScreen() {
                 ))
               ) : (
                 <View style={styles.emptyBadgeContainer}>
-                  <Text style={{ color: colors.textSecondary, fontSize: 12 }}>Selesaikan sesi pertamamu untuk mendapatkan lencana!</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{t('finish_first_session_badge')}</Text>
                 </View>
               )}
            </View>
@@ -235,7 +238,7 @@ export default function ProgressScreen() {
 
         {/* Activity Chart Section */}
         <View style={[styles.sectionContainer, { marginBottom: 30 }]}>
-           <Text style={[styles.sectionTitle, { color: colors.text }]}>Aktivitas Belajar</Text>
+           <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('learning_activity')}</Text>
 
            <View style={[styles.chartCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               {learningPulse && learningPulse.completed > 0 ? (
@@ -243,21 +246,21 @@ export default function ProgressScreen() {
                   <View style={styles.chartHeaderRow}>
                     <View>
                         <Text style={[styles.chartValueStr, { color: colors.text }]}>{learningPulse?.completed || 0}</Text>
-                        <Text style={[styles.chartValueLabel, { color: colors.text }]}>Sesi</Text>
-                        <Text style={[styles.chartValueDesc, { color: colors.textSecondary }]}>Total sesi selesai{'\n'}minggu ini</Text>
+                        <Text style={[styles.chartValueLabel, { color: colors.text }]}>{t('tutor_stats_sessions')}</Text>
+                        <Text style={[styles.chartValueDesc, { color: colors.textSecondary }]}>{t('total_completed_week')}</Text>
                     </View>
                     <View style={[styles.togglePill, { backgroundColor: colors.border }]}>
                         <TouchableOpacity 
-                          style={[styles.toggleActive, activeTab === 'Minggu' && { backgroundColor: colors.primary }]}
-                          onPress={() => setActiveTab('Minggu')}
+                          style={[styles.toggleActive, activeTab === t('week') && { backgroundColor: colors.primary }]}
+                          onPress={() => setActiveTab(t('week'))}
                         >
-                          <Text style={[styles.toggleActiveText, activeTab !== 'Minggu' && { color: colors.textSecondary }]}>Minggu</Text>
+                          <Text style={[styles.toggleActiveText, activeTab !== t('week') && { color: colors.textSecondary }]}>{t('week')}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity 
-                          style={[styles.toggleInactive, activeTab === 'Bulan' && { backgroundColor: colors.primary, borderRadius: 16 }]}
-                          onPress={() => setActiveTab('Bulan')}
+                          style={[styles.toggleInactive, activeTab === t('month') && { backgroundColor: colors.primary, borderRadius: 16 }]}
+                          onPress={() => setActiveTab(t('month'))}
                         >
-                          <Text style={[styles.toggleInactiveText, { color: activeTab === 'Bulan' ? '#FFF' : colors.textSecondary }]}>Bulan</Text>
+                          <Text style={[styles.toggleInactiveText, { color: activeTab === t('month') ? '#FFF' : colors.textSecondary }]}>{t('month')}</Text>
                         </TouchableOpacity>
                     </View>
                   </View>
@@ -281,7 +284,7 @@ export default function ProgressScreen() {
               ) : (
                 <View style={styles.emptyChartState}>
                   <Ionicons name="bar-chart-outline" size={48} color={colors.border} />
-                  <Text style={[styles.emptyChartText, { color: colors.textSecondary, textAlign: 'center', marginTop: 10 }]}>Grafik aktivitas akan muncul setelah kamu menyelesaikan sesi belajar.</Text>
+                  <Text style={[styles.emptyChartText, { color: colors.textSecondary, textAlign: 'center', marginTop: 10 }]}>{t('activity_chart_desc')}</Text>
                 </View>
               )}
            </View>

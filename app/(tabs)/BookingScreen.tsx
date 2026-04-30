@@ -14,13 +14,14 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import { useProfile } from '../../context/ProfileContext';
 
 const { width } = Dimensions.get('window');
 
-const DAYS = ['MIN', 'SEN', 'SEL', 'RAB', 'KAM', 'JUM', 'SAB'];
+const getDays = (t: any) => [t('day_min'), t('day_sen'), t('day_sel'), t('day_rab'), t('day_kam'), t('day_jum'), t('day_sab')];
 
 const TIME_SLOTS = [
   { time: '09:00 AM', available: true },
@@ -34,6 +35,7 @@ const TIME_SLOTS = [
 export default function BookingScreen() {
   const router = useRouter();
   const { colors } = useTheme();
+  const { t, language } = useLanguage();
   const params = useLocalSearchParams();
   const { profileData } = useProfile();
 
@@ -51,12 +53,13 @@ export default function BookingScreen() {
   const [isBooking, setIsBooking] = useState(false);
 
   // Derived Info
-  const displayTutorName = (params.tutorName as string) || tutorDetail?.user?.name || "Memuat...";
-  const displaySubject = (params.subject as string) || (tutorDetail?.subjects && tutorDetail.subjects[0]) || "General Study";
+  const displayTutorName = (params.tutorName as string) || tutorDetail?.user?.name || t('loading');
+  const rawSubject = (params.subject as string) || (tutorDetail?.subjects && tutorDetail.subjects[0]) || "General Study";
+  const displaySubject = t(`subject_${rawSubject.toLowerCase().replace(/\s+/g, '_')}`);
 
   // Date Helpers
   const now = new Date();
-  const currentMonthName = now.toLocaleString('id-ID', { month: 'long' });
+  const currentMonthName = now.toLocaleString(language === 'id' ? 'id-ID' : 'en-US', { month: 'long' });
   const currentYear = now.getFullYear();
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
@@ -75,12 +78,12 @@ export default function BookingScreen() {
 
   const handleConfirm = async () => {
     if (!user) {
-      Alert.alert("Error", "Sesi tidak ditemukan. Silakan login kembali.");
+      Alert.alert("Error", t('error_login_required') || "Sesi tidak ditemukan. Silakan login kembali.");
       return;
     }
 
     if (!params.tutorId) {
-      Alert.alert("Error", "Informasi tutor tidak ditemukan.");
+      Alert.alert(t('error'), t('error_tutor_not_found'));
       return;
     }
 
@@ -89,19 +92,19 @@ export default function BookingScreen() {
       await bookSessionMutation({
         learnerId: user._id,
         tutorId: params.tutorId as any,
-        subject: displaySubject,
+        subject: rawSubject,
         date: `${selectedDate} ${currentMonthName} ${currentYear}`,
         time: selectedTime,
       });
 
       Alert.alert(
-        "Pemesanan Berhasil!",
-        "Sesi Anda telah dijadwalkan. Tutor akan segera mengonfirmasi.",
-        [{ text: "Lihat Progres", onPress: () => router.push('/(tabs)/ProgressScreen' as any) }]
+        t('booking_success'),
+        t('booking_desc'),
+        [{ text: t('view_progress'), onPress: () => router.push('/(tabs)/ProgressScreen' as any) }]
       );
     } catch (e) {
       console.error(e);
-      Alert.alert("Gagal", "Terjadi kesalahan saat memesan sesi.");
+      Alert.alert(t('failed'), t('failed_booking_alert'));
     } finally {
       setIsBooking(false);
     }
@@ -130,9 +133,9 @@ export default function BookingScreen() {
         
         {/* Selected Session Confirmation Card (Hero) */}
         <View style={[styles.confirmationCard, { backgroundColor: colors.primary, marginTop: 10 }]}>
-           <Text style={styles.confSuperTitle}>SESI TERPILIH</Text>
+           <Text style={styles.confSuperTitle}>{t('selected_session')}</Text>
            <Text style={styles.confTitle}>{displaySubject}</Text>
-           <Text style={[styles.confInfoText, { marginBottom: 16, marginLeft: 0 }]}>Tutor: {displayTutorName}</Text>
+           <Text style={[styles.confInfoText, { marginBottom: 16, marginLeft: 0 }]}>{t('role_tutor')}: {displayTutorName}</Text>
            
            <View style={styles.confInfoRow}>
              <Ionicons name="calendar-outline" size={16} color="#EBE2FF" />
@@ -149,7 +152,7 @@ export default function BookingScreen() {
               disabled={isBooking}
             >
               <Text style={[styles.confButtonText, { color: colors.primary }]}>
-                {isBooking ? "Memproses..." : "Konfirmasi Pesanan"}
+                {isBooking ? t('processing') : t('confirm_booking')}
               </Text>
            </TouchableOpacity>
         </View>
@@ -157,11 +160,10 @@ export default function BookingScreen() {
         {/* Page Title */}
         <View style={styles.titleSection}>
           <Text style={[styles.mainTitle, { color: colors.text }]}>
-            Pesan Sesi{'\n'}
-            <Text style={[styles.mainTitleHighlight, { color: colors.primary }]}>Berikutnya</Text>
+            {t('booking_title')}
           </Text>
           <Text style={[styles.mainDesc, { color: colors.textSecondary }]}>
-            Jadwalkan pengalaman belajar yang dipersonalisasi dengan tutor pilihanmu.
+            {t('booking_subtitle')}
           </Text>
         </View>
 
@@ -169,7 +171,7 @@ export default function BookingScreen() {
         <View style={[styles.calendarCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.calendarHeader}>
             <View>
-              <Text style={[styles.calTitle, { color: colors.text }]}>Pilih Tanggal</Text>
+              <Text style={[styles.calTitle, { color: colors.text }]}>{t('choose_date')}</Text>
               <Text style={[styles.calSubtitle, { color: colors.textSecondary }]}>{currentMonthName} {currentYear}</Text>
             </View>
             <View style={styles.arrowsRow}>
@@ -179,7 +181,7 @@ export default function BookingScreen() {
           </View>
           
           <View style={styles.daysRow}>
-            {DAYS.map(day => (
+            {getDays(t).map(day => (
               <Text key={day} style={styles.dayLabel}>{day}</Text>
             ))}
           </View>
@@ -215,7 +217,7 @@ export default function BookingScreen() {
         <View style={styles.slotsSection}>
           <View style={styles.slotsHeader}>
             <Ionicons name="time" size={20} color={colors.primary} style={styles.slotsIcon} />
-            <Text style={[styles.slotsTitle, { color: colors.text }]}>Slot Tersedia</Text>
+            <Text style={[styles.slotsTitle, { color: colors.text }]}>{t('available_slots')}</Text>
           </View>
           
           <View style={styles.slotsList}>
@@ -244,7 +246,7 @@ export default function BookingScreen() {
                   {/* Right side Elements */}
                   {slot.tag && (
                     <View style={[styles.slotTag, { backgroundColor: colors.primaryLight }]}>
-                      <Text style={[styles.slotTagText, { color: colors.primary }]}>{slot.tag}</Text>
+                      <Text style={[styles.slotTagText, { color: colors.primary }]}>{t(slot.tag.toLowerCase())}</Text>
                     </View>
                   )}
                   {isSelected && (
@@ -259,8 +261,7 @@ export default function BookingScreen() {
         {/* Recommended Groups */}
         <View style={styles.groupsSection}>
           <Text style={[styles.groupsHeader, { color: colors.text }]}>
-            Grup Belajar{'\n'}
-            <Text style={[styles.groupsHeaderHighlight, { color: colors.primary }]}>Direkomendasikan</Text>
+            {t('recommended_groups')}
           </Text>
 
           <ScrollView 
@@ -276,7 +277,7 @@ export default function BookingScreen() {
                   <Ionicons name="people" size={24} color={colors.primary} />
                 </View>
                 <Text style={[styles.groupTitle, { color: colors.text }]} numberOfLines={1}>{group.title}</Text>
-                <Text style={[styles.groupMeta, { color: colors.textSecondary }]}>{group.participants} Peserta • {group.tutorName}</Text>
+                <Text style={[styles.groupMeta, { color: colors.textSecondary }]}>{group.participants} {t('participants')} • {group.tutorName}</Text>
                 
                 <View style={styles.groupAvatars}>
                   {Array.from({ length: 3 }).map((_, i) => (
