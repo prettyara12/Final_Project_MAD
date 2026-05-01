@@ -8,8 +8,11 @@
  * @module
  */
 
+import type * as auth from "../auth.js";
 import type * as chat from "../chat.js";
+import type * as googleAuth from "../googleAuth.js";
 import type * as groups from "../groups.js";
+import type * as http from "../http.js";
 import type * as messages from "../messages.js";
 import type * as notifications from "../notifications.js";
 import type * as seed from "../seed.js";
@@ -25,8 +28,11 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  auth: typeof auth;
   chat: typeof chat;
+  googleAuth: typeof googleAuth;
   groups: typeof groups;
+  http: typeof http;
   messages: typeof messages;
   notifications: typeof notifications;
   seed: typeof seed;

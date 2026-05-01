@@ -3,7 +3,9 @@ import { ThemeProvider } from "../context/ThemeContext";
 import { ProfileProvider } from "../context/ProfileContext";
 import { TutorSettingsProvider } from "../context/TutorSettingsContext";
 import { LanguageProvider } from "../context/LanguageContext";
-import { ConvexProvider, ConvexReactClient } from "convex/react";
+import { ConvexAuthProvider } from "@convex-dev/auth/react";
+import { ConvexReactClient } from "convex/react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL;
 console.log("Initializing Convex with URL:", convexUrl);
@@ -16,7 +18,7 @@ const convex = new ConvexReactClient(convexUrl!);
 
 export default function RootLayout() {
   return (
-    <ConvexProvider client={convex}>
+    <ConvexAuthProvider client={convex} storage={AsyncStorage}>
       <ThemeProvider>
         <LanguageProvider>
           <ProfileProvider>
@@ -26,6 +28,7 @@ export default function RootLayout() {
           </ProfileProvider>
         </LanguageProvider>
       </ThemeProvider>
-    </ConvexProvider>
+    </ConvexAuthProvider>
   );
 }
+

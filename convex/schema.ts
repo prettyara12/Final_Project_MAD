@@ -1,10 +1,18 @@
 import { defineSchema, defineTable } from "convex/server";
+import { authTables } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 
 export default defineSchema({
+  ...authTables,
+  // Override the default users table to include app-specific fields
   users: defineTable({
-    name: v.string(),
-    email: v.string(),
+    // Convex Auth standard fields
+    name: v.optional(v.string()),
+    email: v.optional(v.string()),
+    image: v.optional(v.string()),
+    emailVerificationTime: v.optional(v.number()),
+    isAnonymous: v.optional(v.boolean()),
+    // App-specific fields
     password: v.optional(v.string()),
     role: v.optional(v.union(v.literal("tutor"), v.literal("learner"))),
     university: v.optional(v.string()),
@@ -28,7 +36,7 @@ export default defineSchema({
         points: v.number(),
       })
     ),
-  }).index("by_email", ["email"]),
+  }).index("email", ["email"]),
 
   tutors: defineTable({
     userId: v.optional(v.id("users")),
@@ -107,4 +115,12 @@ export default defineSchema({
     subject: v.string(),
     createdAt: v.number(),
   }).index("by_subject", ["subject"]),
+
+  // Temporary table for Google OAuth mobile flow
+  googleAuthSessions: defineTable({
+    sessionId: v.string(),
+    name: v.string(),
+    email: v.string(),
+    picture: v.optional(v.string()),
+  }).index("by_sessionId", ["sessionId"]),
 });

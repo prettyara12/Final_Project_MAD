@@ -11,6 +11,16 @@ export const createUser = mutation({
     major: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    // Check if user with this email already exists
+    const existingUser = await ctx.db
+      .query("users")
+      .withIndex("email", (q) => q.eq("email", args.email))
+      .first();
+
+    if (existingUser) {
+      return existingUser._id;
+    }
+
     const userId = await ctx.db.insert("users", {
       name: args.name,
       email: args.email,
@@ -51,8 +61,8 @@ export const getUserByEmail = query({
   handler: async (ctx, args) => {
     return await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
-      .unique();
+      .withIndex("email", (q) => q.eq("email", args.email))
+      .first();
   },
 });
 
@@ -100,8 +110,8 @@ export const resetPasswordByEmail = mutation({
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
-      .unique();
+      .withIndex("email", (q) => q.eq("email", args.email))
+      .first();
     
     if (!user) {
       throw new Error("User not found");
@@ -117,8 +127,8 @@ export const checkUserExists = mutation({
   handler: async (ctx, args) => {
     const user = await ctx.db
       .query("users")
-      .withIndex("by_email", (q) => q.eq("email", args.email))
-      .unique();
+      .withIndex("email", (q) => q.eq("email", args.email))
+      .first();
     return user !== null;
   },
 });

@@ -21,8 +21,9 @@ import { InputField } from '../../components/InputField';
 import { CustomButton } from '../../components/CustomButton';
 import { useProfile } from '../../context/ProfileContext';
 import { useLanguage, LanguageType } from '../../context/LanguageContext';
-import { useQuery } from 'convex/react';
+import { useQuery, useMutation, useConvex } from 'convex/react';
 import { api } from '../../convex/_generated/api';
+import * as WebBrowser from 'expo-web-browser';
 
 const { width, height } = Dimensions.get('window');
 
@@ -30,6 +31,85 @@ export default function LoginScreen() {
   const router = useRouter();
   const { updateProfile, clearProfile } = useProfile();
   const { language, setLanguage, t } = useLanguage();
+  const convex = useConvex();
+  const createUser = useMutation(api.users.createUser);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const handleGoogleLogin = async () => {
+    try {
+      setGoogleLoading(true);
+      // Generate unique session ID
+      const sessionId = Math.random().toString(36).substring(2) + Date.now().toString(36);
+      const clientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+      const siteUrl = process.env.EXPO_PUBLIC_CONVEX_SITE_URL;
+      const redirectUri = `${siteUrl}/auth/google/mobile-callback`;
+
+      const authUrl =
+        `https://accounts.google.com/o/oauth2/v2/auth?` +
+        `client_id=${clientId}` +
+        `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+        `&response_type=code` +
+        `&scope=${encodeURIComponent('openid profile email')}` +
+        `&prompt=select_account` +
+        `&state=${sessionId}`;
+
+      // Open browser - will return when user closes it
+      await WebBrowser.openAuthSessionAsync(authUrl, 'finalprojectmad://');
+
+      // After browser is closed, poll for the auth result
+      let authData = null;
+      for (let i = 0; i < 15; i++) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        try {
+          authData = await convex.query(api.googleAuth.getGoogleAuthResult, { sessionId });
+          if (authData) break;
+        } catch (e) {
+          // Query might fail, keep trying
+        }
+      }
+
+      if (authData) {
+        const { name, email: authEmail, picture } = authData;
+
+        clearProfile();
+        updateProfile({
+          name,
+          email: authEmail.toLowerCase(),
+          phone: '-',
+          address: '-',
+          university: '-',
+          major: '-',
+          year: '-',
+          profileImage: picture || undefined,
+        });
+
+        // Create user in Convex if not exists
+        try {
+          await createUser({
+            name,
+            email: authEmail.toLowerCase(),
+            role: activeRole,
+          });
+        } catch (e) {
+          console.log('User may already exist:', e);
+        }
+
+        // Navigate based on selected role (pelajar or tutor)
+        if (activeRole === 'tutor') {
+          router.replace('/tutor/TutorDashboardScreen' as any);
+        } else {
+          router.replace('/HomeScreen' as any);
+        }
+      } else {
+        Alert.alert('Info', 'Login dibatalkan atau timeout. Silakan coba lagi.');
+      }
+    } catch (error) {
+      console.error('Google sign-in error:', error);
+      Alert.alert('Error', 'Google sign-in gagal. Silakan coba lagi.');
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
 
   const [activeRole, setActiveRole] = useState<'learner' | 'tutor'>('learner');
   const [email, setEmail] = useState('');
@@ -188,8 +268,12 @@ export default function LoginScreen() {
               </View>
 
               <View style={styles.socialButtonsRow}>
-                <TouchableOpacity style={styles.socialBtn}>
-                  <Image source={require('../../assets/images/google-logo.png')} style={{ width: 24, height: 24 }} />
+                <TouchableOpacity style={styles.socialBtn} onPress={handleGoogleLogin} disabled={googleLoading}>
+                  {googleLoading ? (
+                    <ActivityIndicator size="small" color="#4F46E5" />
+                  ) : (
+                    <Image source={require('../../assets/images/google-logo.png')} style={{ width: 24, height: 24 }} />
+                  )}
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.socialBtn}><Ionicons name="logo-apple" size={24} color="#000000" /></TouchableOpacity>
               </View>
